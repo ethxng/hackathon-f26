@@ -4,6 +4,7 @@ import { useNudgeAudio } from '../hooks/useNudgeAudio.js'
 import WebcamPanel from './WebcamPanel.jsx'
 import StatusOrb from './StatusOrb.jsx'
 import VitalCard from './VitalCard.jsx'
+import FocusScoreCard from './FocusScoreCard.jsx'
 import NudgeToast from './NudgeToast.jsx'
 import Timeline from './Timeline.jsx'
 import DemoControls from './DemoControls.jsx'
@@ -24,6 +25,8 @@ export default function SessionScreen({ session, stream, onEnd }) {
   const { current, progress, speaking } = useNudgeAudio(nudge, session)
   const elapsed = useElapsed()
   const stressNudge = current?.state === 'overStressed'
+  // Presage's framing hint explains why there's no pulse yet (e.g. "Move up, or tilt the camera down.").
+  const waitingHint = validation && !validation.ok ? validation.hint : null
 
   return (
     <div className="mx-auto max-w-7xl px-6 pb-40 pt-6">
@@ -62,23 +65,14 @@ export default function SessionScreen({ session, stream, onEnd }) {
             <VitalCard
               label="Heart rate"
               unit="bpm"
-              value={metrics?.pulse}
-              reliable={metrics?.pulseReliable}
-              confidence={metrics?.pulseConfidence}
-              values={history.map((m) => (m.pulseReliable ? m.pulse : null))}
+              field="pulse"
+              history={history}
+              minSpan={20}
+              waitingHint={waitingHint}
               color="#fb7185"
               highlight={stressNudge}
             />
-            <VitalCard
-              label="Breathing"
-              unit="/min"
-              value={metrics?.breathing}
-              reliable={metrics?.breathingReliable}
-              confidence={metrics?.breathingConfidence}
-              values={history.map((m) => (m.breathingReliable ? m.breathing : null))}
-              color="#38bdf8"
-              highlight={stressNudge}
-            />
+            <FocusScoreCard history={history} state={status.state} />
           </div>
           <Timeline events={timeline} />
         </div>

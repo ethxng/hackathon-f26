@@ -61,6 +61,7 @@ Request body:
   "baseline": { "pulse": 70, "breathing": 14 },
   "gender": "female",
   "tone": "sarcastic",
+  "focusScore": 62,
   "at": 1791660000000
 }
 ```

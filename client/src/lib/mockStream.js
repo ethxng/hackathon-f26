@@ -9,7 +9,7 @@ const NUDGE_DELAY_MS = 4000
 const PROFILES = {
   focused: { pulse: 72, breathing: 14, faceDetected: true, faceCentered: true, talking: false },
   unfocused: { pulse: 76, breathing: 15, faceDetected: true, faceCentered: false, talking: true },
-  overStressed: { pulse: 101, breathing: 23, faceDetected: true, faceCentered: true, talking: false },
+  overStressed: { pulse: 108, breathing: 23, faceDetected: true, faceCentered: true, talking: false },
 }
 
 const REASONS = {
@@ -51,6 +51,10 @@ export function createMockStream({ onMessage, onOpen }) {
   let current = { ...PROFILES.focused }
   let nudgeTimer = null
   let validationTimer = null
+  // Same rules as server/src/focusScore.js: start 50, +0.5/s focused,
+  // −10 on entering a drift then −1/s, otherwise hold. One tick = 1s.
+  let focusScore = 50
+  let scoredState = null
 
   const emit = (msg) => onMessage({ t: Date.now(), ...msg })
   const emitValidation = (v) => emit({ type: MSG.VALIDATION, ...v })
@@ -80,6 +84,11 @@ export function createMockStream({ onMessage, onOpen }) {
     const breathingConfidence = Math.round(jitter(85, 5) * warm)
     current.pulse += (target.pulse - current.pulse) * 0.25
     current.breathing += (target.breathing - current.breathing) * 0.25
+    setState(Date.now() - startedAt < CALIBRATION_MS ? 'calibrating' : scenario)
+    if (state === 'focused') focusScore += 0.5
+    else if (state === 'unfocused') focusScore -= scoredState === 'unfocused' ? 1 : 10
+    focusScore = Math.min(100, Math.max(0, focusScore))
+    scoredState = state
     emit({
       type: MSG.METRICS,
       pulse: round1(jitter(current.pulse, 1.5)),
@@ -94,8 +103,8 @@ export function createMockStream({ onMessage, onOpen }) {
       talking: target.talking,
       blinking: Math.random() < 0.2,
       expression: scenario === 'overStressed' ? 'fear' : 'neutral',
+      focusScore: Math.round(focusScore),
     })
-    setState(Date.now() - startedAt < CALIBRATION_MS ? 'calibrating' : scenario)
   }
 
   return {
@@ -105,6 +114,8 @@ export function createMockStream({ onMessage, onOpen }) {
         startedAt = Date.now()
         scenario = 'focused'
         state = null
+        focusScore = 50
+        scoredState = null
         clearInterval(timer)
         timer = setInterval(tick, 1000)
         tick()
