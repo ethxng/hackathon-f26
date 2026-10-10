@@ -20,7 +20,7 @@ function useElapsed() {
 }
 
 export default function SessionScreen({ session, stream, onEnd }) {
-  const { metrics, history, status, nudge, validation, timeline, connected, source, demo, subscribeFrames } = stream
+  const { metrics, status, nudge, validation, timeline, connected, source, demo, subscribeFrames, subscribeTraces } = stream
   const { current, progress, speaking } = useNudgeAudio(nudge, session)
   const elapsed = useElapsed()
   const stressNudge = current?.state === 'overStressed'
@@ -65,7 +65,10 @@ export default function SessionScreen({ session, stream, onEnd }) {
               value={metrics?.pulse}
               reliable={metrics?.pulseReliable}
               confidence={metrics?.pulseConfidence}
-              values={history.map((m) => (m.pulseReliable ? m.pulse : null))}
+              subscribeTraces={subscribeTraces}
+              waveField="pulse"
+              rateField="pulseRate"
+              waveLabel="Pulse waveform"
               color="#fb7185"
               highlight={stressNudge}
             />
@@ -75,7 +78,10 @@ export default function SessionScreen({ session, stream, onEnd }) {
               value={metrics?.breathing}
               reliable={metrics?.breathingReliable}
               confidence={metrics?.breathingConfidence}
-              values={history.map((m) => (m.breathingReliable ? m.breathing : null))}
+              subscribeTraces={subscribeTraces}
+              waveField="breathing"
+              rateField="breathingRate"
+              waveLabel="Breathing waveform"
               color="#38bdf8"
               highlight={stressNudge}
             />

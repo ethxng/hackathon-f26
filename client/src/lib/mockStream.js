@@ -5,6 +5,7 @@ import { MSG } from './contract.js'
 
 const CALIBRATION_MS = 6000
 const NUDGE_DELAY_MS = 4000
+const TRACE_HZ = 30
 
 const PROFILES = {
   focused: { pulse: 72, breathing: 14, faceDetected: true, faceCentered: true, talking: false },
@@ -41,9 +42,17 @@ const VALIDATION = {
 
 const jitter = (base, amount) => base + (Math.random() - 0.5) * amount * 2
 const round1 = (v) => Math.round(v * 10) / 10
+const bump = (x, center, width) => Math.exp(-((x - center) ** 2) / width)
+// One heartbeat, phase 0–1: systolic peak, then the smaller dicrotic bump.
+const pulseWave = (phase) => bump(phase, 0.18, 0.006) + 0.35 * bump(phase, 0.48, 0.015)
 
 export function createMockStream({ onMessage, onOpen }) {
   let timer = null
+  let traceTimer = null
+  let lastTraceAt = 0
+  let pulsePhase = 0
+  let breathPhase = 0
+  let confidence = { pulse: 0, breathing: 0 }
   let startedAt = 0
   let scenario = 'focused'
   let state = null
@@ -78,6 +87,7 @@ export function createMockStream({ onMessage, onOpen }) {
     const warm = Math.min(1, (Date.now() - startedAt) / 4000)
     const pulseConfidence = Math.round(jitter(90, 5) * warm)
     const breathingConfidence = Math.round(jitter(85, 5) * warm)
+    confidence = { pulse: pulseConfidence, breathing: breathingConfidence }
     current.pulse += (target.pulse - current.pulse) * 0.25
     current.breathing += (target.breathing - current.breathing) * 0.25
     emit({
@@ -98,6 +108,22 @@ export function createMockStream({ onMessage, onOpen }) {
     setState(Date.now() - startedAt < CALIBRATION_MS ? 'calibrating' : scenario)
   }
 
+  // Full-rate waveforms and rates for the live charts, like Presage's per-event output.
+  function traceTick() {
+    const now = Date.now()
+    const dtMin = (now - lastTraceAt) / 60000
+    lastTraceAt = now
+    pulsePhase = (pulsePhase + current.pulse * dtMin) % 1
+    breathPhase = (breathPhase + current.breathing * dtMin) % 1
+    onMessage({
+      type: MSG.TRACE,
+      pulse: [[now, pulseWave(pulsePhase) + jitter(0, 0.02)]],
+      breathing: [[now, Math.sin(breathPhase * 2 * Math.PI) + jitter(0, 0.03)]],
+      pulseRate: [[now, round1(jitter(current.pulse, 0.4)), confidence.pulse]],
+      breathingRate: [[now, round1(jitter(current.breathing, 0.15)), confidence.breathing]],
+    })
+  }
+
   return {
     send(msg) {
       if (msg.type === MSG.SESSION_START) {
@@ -106,11 +132,15 @@ export function createMockStream({ onMessage, onOpen }) {
         scenario = 'focused'
         state = null
         clearInterval(timer)
+        clearInterval(traceTimer)
         timer = setInterval(tick, 1000)
         tick()
+        lastTraceAt = Date.now()
+        traceTimer = setInterval(traceTick, 1000 / TRACE_HZ)
         emitValidation(VALIDATION.ok)
       } else if (msg.type === MSG.SESSION_STOP) {
         clearInterval(timer)
+        clearInterval(traceTimer)
         clearTimeout(nudgeTimer)
         clearTimeout(validationTimer)
       }
@@ -120,6 +150,7 @@ export function createMockStream({ onMessage, onOpen }) {
     },
     close() {
       clearInterval(timer)
+      clearInterval(traceTimer)
       clearTimeout(nudgeTimer)
       clearTimeout(validationTimer)
     },

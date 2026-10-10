@@ -4,7 +4,6 @@ import { createMockStream } from '../lib/mockStream.js'
 
 const SOURCE = import.meta.env.VITE_DATA_SOURCE ?? 'mock'
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:3001'
-const HISTORY_LEN = 60
 
 function createWsStream({ onMessage, onFrame, onOpen, onClose }) {
   let ws = null
@@ -52,14 +51,14 @@ function createWsStream({ onMessage, onFrame, onOpen, onClose }) {
 export function useFocusStream() {
   const [connected, setConnected] = useState(false)
   const [metrics, setMetrics] = useState(null)
-  const [history, setHistory] = useState([])
   const [status, setStatus] = useState({ state: 'calibrating', reasons: [], confidence: null })
   const [nudge, setNudge] = useState(null)
   const [validation, setValidation] = useState(null)
   const [timeline, setTimeline] = useState([])
   const streamRef = useRef(null)
-  // Preview frames bypass React state (15/s would re-render the whole tree).
+  // Preview frames and chart traces bypass React state (15–30/s would re-render the whole tree).
   const frameListeners = useRef(new Set())
+  const traceListeners = useRef(new Set())
   const lastStateRef = useRef(null)
 
   useEffect(() => {
@@ -67,7 +66,9 @@ export function useFocusStream() {
       switch (msg.type) {
         case MSG.METRICS:
           setMetrics(msg)
-          setHistory((h) => [...h.slice(-(HISTORY_LEN - 1)), msg])
+          break
+        case MSG.TRACE:
+          traceListeners.current.forEach((fn) => fn(msg))
           break
         case MSG.STATE:
           setStatus({ state: msg.state, reasons: msg.reasons ?? [], confidence: msg.confidence ?? null })
@@ -99,7 +100,6 @@ export function useFocusStream() {
   }, [])
 
   const start = useCallback(({ gender, tone, goalMinutes }) => {
-    setHistory([])
     setTimeline([])
     lastStateRef.current = null
     setMetrics(null)
@@ -116,17 +116,23 @@ export function useFocusStream() {
     return () => frameListeners.current.delete(fn)
   }, [])
 
+  const subscribeTraces = useCallback((fn) => {
+    traceListeners.current.add(fn)
+    return () => traceListeners.current.delete(fn)
+  }, [])
+
   return {
     source: SOURCE,
     connected,
     metrics,
-    history,
     status,
     nudge,
     validation,
     timeline,
     start,
     stop,
+    // Full-rate measurements for the live charts; see the 'trace' message in contract.js.
+    subscribeTraces,
     // Camera frames from Presage (ws mode only). In mock mode the browser opens the camera itself.
     subscribeFrames: SOURCE === 'ws' ? subscribeFrames : null,
     // Only present in mock mode.

@@ -3,6 +3,11 @@
 // Server -> client:
 //   { type: 'metrics', t, pulse, pulseConfidence, pulseReliable, breathing, breathingConfidence, breathingReliable,
 //                      hrv, faceDetected, faceCentered, talking, blinking, expression }   // confidences 0–100
+//   { type: 'trace', pulse: [[tMs, value]], breathing: [[tMs, value]],
+//                    pulseRate: [[tMs, bpm, confidence]], breathingRate: [[tMs, perMin, confidence]] }
+//     ^ every raw Presage measurement, sent per metrics event (many per second) for the live charts.
+//       pulse/breathing are the waveforms (arterial pressure trace, chest movement), in arbitrary units.
+//       Each message holds only the points since the previous one; append them.
 //   { type: 'state',   t, state, reasons: [], confidence }                                // confidence 0–1 or null
 //   { type: 'validation', t, code, hint, ok, blocksVitals }   // Presage capture feedback, e.g.
 //                      // code 'kFaceNotForward', hint 'Face the camera.'; blocksVitals: readings are being discarded
@@ -15,6 +20,7 @@
 
 export const MSG = {
   METRICS: 'metrics',
+  TRACE: 'trace',
   STATE: 'state',
   NUDGE: 'nudge',
   VALIDATION: 'validation',

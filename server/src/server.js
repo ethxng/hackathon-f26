@@ -1,5 +1,6 @@
-// Streams Presage metrics to the frontend over WebSocket, one sample per second,
-// and serves HTTP routes (POST /api/nudge) on the same port.
+// Streams Presage metrics to the frontend over WebSocket: one merged sample per
+// second for the detector and readouts, plus every raw measurement as it arrives
+// for the live charts. Also serves HTTP routes (POST /api/nudge) on the same port.
 //   npm start
 import 'dotenv/config';
 import http from 'node:http';
@@ -10,6 +11,7 @@ import {
   createPresage,
   createSecondSampler,
   encodePreviewFrame,
+  extractTraces,
   normalize,
   validationName,
   statusName,
@@ -159,6 +161,9 @@ sdk.on('videoOutput', (buf, width, height, stride, pixelFormat) => {
 sdk.on('metrics', (buf, timestampUs) => {
   const decoded = decodeMetrics(buf);
   if (Buffer.isBuffer(decoded)) return;
+  // Charts get every event unmerged, like Presage's electron-quickstart.
+  const trace = wss.clients.size ? extractTraces(decoded) : null;
+  if (trace) broadcast(trace);
   sampler.push(normalize(decoded, { timestampUs, validationCode }));
 });
 

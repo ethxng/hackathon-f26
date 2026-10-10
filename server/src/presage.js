@@ -69,6 +69,27 @@ export function normalize(m, { timestampUs, validationCode } = {}) {
   };
 }
 
+// Measurement timestamps are microseconds, as a number, bigint or protobufjs Long.
+const toMs = (ts) => Number(typeof ts?.toNumber === 'function' ? ts.toNumber() : ts ?? 0) / 1000;
+const points = (arr) => (arr ?? []).map((p) => [toMs(p.timestamp), p.value]);
+const ratePoints = (arr) => (arr ?? []).map((p) => [toMs(p.timestamp), round1(p.value), Math.round(p.confidence ?? 0)]);
+
+// Every measurement in one Presage metrics event, at full rate, for the live
+// charts (the 'trace' message of the WebSocket contract). Each event carries
+// only the slice since the previous one, so the client appends. Returns null
+// when the event has nothing to plot.
+export function extractTraces(m) {
+  const trace = {
+    type: 'trace',
+    pulse: points(m.cardio?.arterialPressureTrace),
+    breathing: points(m.breathing?.upperTrace),
+    pulseRate: ratePoints(m.cardio?.pulseRate),
+    breathingRate: ratePoints(m.breathing?.rate),
+  };
+  const empty = !trace.pulse.length && !trace.breathing.length && !trace.pulseRate.length && !trace.breathingRate.length;
+  return empty ? null : trace;
+}
+
 const ANY_TRUE_FIELDS = new Set(['talking', 'blinking']);
 
 // Presage emits many metrics events per second. This merges them into one
