@@ -55,6 +55,7 @@ export function useFocusStream() {
   const [history, setHistory] = useState([])
   const [status, setStatus] = useState({ state: 'calibrating', reasons: [], confidence: null })
   const [nudge, setNudge] = useState(null)
+  const [validation, setValidation] = useState(null)
   const [timeline, setTimeline] = useState([])
   const streamRef = useRef(null)
   // Preview frames bypass React state (15/s would re-render the whole tree).
@@ -75,6 +76,9 @@ export function useFocusStream() {
             lastStateRef.current = msg.state
             setTimeline((tl) => [...tl, { kind: 'state', ...msg }])
           }
+          break
+        case MSG.VALIDATION:
+          setValidation(msg)
           break
         case MSG.NUDGE:
           setNudge({ ...msg, id: `${msg.t}-${Math.random()}` })
@@ -100,6 +104,7 @@ export function useFocusStream() {
     lastStateRef.current = null
     setMetrics(null)
     setNudge(null)
+    setValidation(null)
     setStatus({ state: 'calibrating', reasons: [], confidence: null })
     streamRef.current?.send({ type: MSG.SESSION_START, voice, goalMinutes })
   }, [])
@@ -118,6 +123,7 @@ export function useFocusStream() {
     history,
     status,
     nudge,
+    validation,
     timeline,
     start,
     stop,

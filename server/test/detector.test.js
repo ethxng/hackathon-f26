@@ -2,6 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assessQuality, createDetector } from '../src/detector.js';
 
+// How Presage reports a missing face / a turned head.
+const NO_FACE = { validation: 'kNoFaceFound', faceDetected: false };
+const TURNED = { validation: 'kFaceNotForward' };
+
 const CALM = {
   pulse: 70,
   pulseConfidence: 90,
@@ -45,10 +49,10 @@ test('stays calibrating until 10 pulse readings, then goes focused', () => {
 
 test('face missing → unfocused only after the hold time, then recovers', () => {
   const d = calibrated();
-  const away = run(d, 15, () => ({ faceDetected: false }), 20);
+  const away = run(d, 15, () => NO_FACE, 20);
   const firstUnfocused = away.findIndex((r) => r.state === 'unfocused');
-  // Needs > 50% of the 15s window away (8 samples) plus the 3s hold.
-  assert.ok(firstUnfocused >= 10, `switched too early at +${firstUnfocused}s`);
+  // Needs > 35% of the 8s window away (3 samples) plus the 2s hold: ~5s.
+  assert.ok(firstUnfocused >= 3 && firstUnfocused <= 5, `switched at +${firstUnfocused}s`);
   assert.match(away.at(-1).reasons[0], /looking away/);
 
   const back = run(d, 20, () => ({}), 35);
@@ -58,7 +62,21 @@ test('face missing → unfocused only after the hold time, then recovers', () =>
 
 test('a single glance away does not flip the state', () => {
   const d = calibrated();
-  const r = run(d, 15, (i) => (i === 25 ? { faceDetected: false } : {}), 20);
+  const r = run(d, 15, (i) => (i === 25 ? TURNED : {}), 20);
+  assert.ok(r.every((x) => x.state === 'focused'));
+});
+
+test('turning your head (kFaceNotForward) counts as looking away', () => {
+  const d = calibrated();
+  const r = run(d, 8, () => TURNED, 20);
+  const first = r.findIndex((x) => x.state === 'unfocused');
+  assert.ok(first >= 3 && first <= 5, `switched at +${first}s`);
+  assert.match(r.at(-1).reasons[0], /looking away \d+% of the last 8s/);
+});
+
+test('glancing away 2s out of every 8 is not drifting', () => {
+  const d = calibrated();
+  const r = run(d, 24, (i) => (i % 8 < 2 ? TURNED : {}), 20);
   assert.ok(r.every((x) => x.state === 'focused'));
 });
 
@@ -76,17 +94,35 @@ test('pulse well above resting → overStressed', () => {
   assert.match(r.at(-1).reasons[0], /heart rate .* \(resting 70\)/);
 });
 
-test('mild pulse rise alone is not stress, but with fast breathing it is', () => {
+test('mild pulse rise alone is not stress, but with faster breathing it is', () => {
   const mild = calibrated();
-  assert.equal(run(mild, 20, () => ({ pulse: 82 }), 20).at(-1).state, 'focused'); // +17%
+  assert.equal(run(mild, 20, () => ({ pulse: 77 }), 20).at(-1).state, 'focused'); // +10%
 
   const both = calibrated();
-  assert.equal(run(both, 20, () => ({ pulse: 82, breathing: 20 }), 20).at(-1).state, 'overStressed');
+  assert.equal(run(both, 20, () => ({ pulse: 77, breathing: 17 }), 20).at(-1).state, 'overStressed'); // +10%, +21%
+});
+
+test('pulse +16% alone is enough', () => {
+  const d = calibrated();
+  assert.equal(run(d, 20, () => ({ pulse: 81 }), 20).at(-1).state, 'overStressed');
+});
+
+test('fast breathing alone (+36%) is enough', () => {
+  const d = calibrated();
+  const r = run(d, 20, () => ({ breathing: 19 }), 20).at(-1);
+  assert.equal(r.state, 'overStressed');
+  assert.match(r.reasons[0], /breathing 19\/min \(resting 14\)/);
+});
+
+test('tense expression plus a small pulse rise is stress', () => {
+  const d = calibrated();
+  const r = run(d, 20, () => ({ pulse: 77, expression: 'angry' }), 20).at(-1);
+  assert.equal(r.state, 'overStressed');
 });
 
 test('stressed wins over distracted', () => {
   const d = calibrated();
-  const r = run(d, 20, () => ({ pulse: 95, faceDetected: false }), 20);
+  const r = run(d, 20, () => ({ pulse: 95, ...TURNED }), 20);
   assert.equal(r.at(-1).state, 'overStressed');
 });
 
@@ -98,12 +134,12 @@ test('one trigger per episode, none again inside the cooldown', () => {
     t += secs;
     return r.filter((x) => x.trigger).length;
   };
-  assert.equal(episode({ faceDetected: false }, 20), 1);
+  assert.equal(episode(NO_FACE, 20), 1);
   episode({}, 20); // recover
   assert.equal(d.state, 'focused');
-  assert.equal(episode({ faceDetected: false }, 15), 0); // still within the 60s per-state cooldown
+  assert.equal(episode(NO_FACE, 15), 0); // still within the 60s per-state cooldown
   episode({}, 20);
-  assert.equal(episode({ faceDetected: false }, 20), 1); // cooldown over
+  assert.equal(episode(NO_FACE, 20), 1); // cooldown over
 });
 
 test('no pulse ever → leaves calibrating at 45s using absolute thresholds', () => {
@@ -164,7 +200,7 @@ test('high pulse with too little reliable coverage is not judged as stress', () 
 test('state confidence scales with how far past the threshold the signal is', () => {
   const mild = calibrated();
   const strong = calibrated();
-  const a = run(mild, 20, () => ({ pulse: 82, breathing: 20 }), 20).at(-1); // just past both thresholds
+  const a = run(mild, 20, () => ({ pulse: 77, breathing: 17 }), 20).at(-1); // just past both thresholds
   const b = run(strong, 20, () => ({ pulse: 100 }), 20).at(-1); // +43%
   assert.equal(a.state, 'overStressed');
   assert.equal(b.state, 'overStressed');

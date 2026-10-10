@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWebcam } from '../hooks/useWebcam.js'
+import { useStableValidation } from '../hooks/useStableValidation.js'
 import { STATES } from '../lib/contract.js'
 
 // Draws Presage's preview frames (uint16 w, uint16 h, then RGB bytes) to a canvas.
@@ -62,8 +63,25 @@ function BrowserFeed() {
   )
 }
 
-export default function WebcamPanel({ state, faceDetected, subscribeFrames }) {
+function ValidationHint({ validation }) {
+  const text = validation.hint || validation.code
+  if (validation.blocksVitals) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-full border border-amber-300/30 bg-amber-950/70 px-4 py-2 text-sm text-amber-100 backdrop-blur">
+        <span>⚠ {text}</span>
+        <span className="text-xs uppercase tracking-wider text-amber-300/80">Vitals paused</span>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-full border border-white/15 bg-black/60 px-4 py-2 text-sm text-slate-100 backdrop-blur">{text}</div>
+  )
+}
+
+export default function WebcamPanel({ state, faceDetected, validation, subscribeFrames }) {
   const color = STATES[state]?.color ?? STATES.calibrating.color
+  const hint = useStableValidation(validation)
+  const faceLost = faceDetected === false
 
   return (
     <div
@@ -72,9 +90,16 @@ export default function WebcamPanel({ state, faceDetected, subscribeFrames }) {
     >
       {subscribeFrames ? <PresageFeed subscribeFrames={subscribeFrames} /> : <BrowserFeed />}
 
-      {faceDetected === false && (
+      {faceLost && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <span className="rounded-full bg-amber-400/20 px-4 py-2 text-amber-200">Face not detected</span>
+        </div>
+      )}
+
+      {/* The face-lost overlay already covers kNoFaceFound. */}
+      {hint && !faceLost && (
+        <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
+          <ValidationHint validation={hint} />
         </div>
       )}
 

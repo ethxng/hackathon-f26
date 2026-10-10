@@ -4,6 +4,8 @@
 //   { type: 'metrics', t, pulse, pulseConfidence, pulseReliable, breathing, breathingConfidence, breathingReliable,
 //                      hrv, faceDetected, faceCentered, talking, blinking, expression }   // confidences 0–100
 //   { type: 'state',   t, state, reasons: [], confidence }                                // confidence 0–1 or null
+//   { type: 'validation', t, code, hint, ok, blocksVitals }   // Presage capture feedback, e.g.
+//                      // code 'kFaceNotForward', hint 'Face the camera.'; blocksVitals: readings are being discarded
 //   { type: 'nudge',   t, state, reasons, text, audio }   // audio: base64 mp3 from ElevenLabs (optional)
 //     ^ sent after the server POSTs a detector trigger to the nudge endpoint (see server/src/trigger.js)
 //       and gets back { text, audio }.
@@ -15,6 +17,7 @@ export const MSG = {
   METRICS: 'metrics',
   STATE: 'state',
   NUDGE: 'nudge',
+  VALIDATION: 'validation',
   SESSION_START: 'session:start',
   SESSION_STOP: 'session:stop',
 }

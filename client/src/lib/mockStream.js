@@ -7,9 +7,9 @@ const CALIBRATION_MS = 6000
 const NUDGE_DELAY_MS = 4000
 
 const PROFILES = {
-  focused: { pulse: 72, breathing: 14, faceDetected: true, talking: false },
-  unfocused: { pulse: 76, breathing: 15, faceDetected: false, talking: true },
-  overStressed: { pulse: 101, breathing: 23, faceDetected: true, talking: false },
+  focused: { pulse: 72, breathing: 14, faceDetected: true, faceCentered: true, talking: false },
+  unfocused: { pulse: 76, breathing: 15, faceDetected: true, faceCentered: false, talking: true },
+  overStressed: { pulse: 101, breathing: 23, faceDetected: true, faceCentered: true, talking: false },
 }
 
 const REASONS = {
@@ -36,6 +36,12 @@ const CANNED_TEXT = {
   },
 }
 
+const VALIDATION = {
+  ok: { code: 'kOk', hint: 'Hold still and record.', ok: true, blocksVitals: false },
+  notForward: { code: 'kFaceNotForward', hint: 'Face the camera.', ok: false, blocksVitals: false },
+  motion: { code: 'kExcessiveMotion', hint: 'Hold still - motion may affect accuracy.', ok: false, blocksVitals: true },
+}
+
 const jitter = (base, amount) => base + (Math.random() - 0.5) * amount * 2
 const round1 = (v) => Math.round(v * 10) / 10
 
@@ -47,8 +53,10 @@ export function createMockStream({ onMessage, onOpen }) {
   let voice = 'calm'
   let current = { ...PROFILES.focused }
   let nudgeTimer = null
+  let validationTimer = null
 
   const emit = (msg) => onMessage({ t: Date.now(), ...msg })
+  const emitValidation = (v) => emit({ type: MSG.VALIDATION, ...v })
 
   function setState(next) {
     if (next === state) return
@@ -85,7 +93,7 @@ export function createMockStream({ onMessage, onOpen }) {
       breathingReliable: breathingConfidence >= 50,
       hrv: round1(jitter(scenario === 'overStressed' ? 22 : 45, 3)),
       faceDetected: target.faceDetected,
-      faceCentered: target.faceDetected,
+      faceCentered: target.faceCentered,
       talking: target.talking,
       blinking: Math.random() < 0.2,
       expression: scenario === 'overStressed' ? 'fear' : 'neutral',
@@ -103,9 +111,11 @@ export function createMockStream({ onMessage, onOpen }) {
         clearInterval(timer)
         timer = setInterval(tick, 1000)
         tick()
+        emitValidation(VALIDATION.ok)
       } else if (msg.type === MSG.SESSION_STOP) {
         clearInterval(timer)
         clearTimeout(nudgeTimer)
+        clearTimeout(validationTimer)
       }
     },
     connect() {
@@ -114,11 +124,19 @@ export function createMockStream({ onMessage, onOpen }) {
     close() {
       clearInterval(timer)
       clearTimeout(nudgeTimer)
+      clearTimeout(validationTimer)
     },
     // Demo controls
     setScenario(next) {
       scenario = next
       startedAt = Math.min(startedAt, Date.now() - CALIBRATION_MS) // skip calibration
+      clearTimeout(validationTimer)
+      if (next === 'unfocused') emitValidation(VALIDATION.notForward)
+      else if (next === 'overStressed') {
+        // A burst of motion, then a clean signal again.
+        emitValidation(VALIDATION.motion)
+        validationTimer = setTimeout(() => emitValidation(VALIDATION.ok), 4000)
+      } else emitValidation(VALIDATION.ok)
     },
     fireNudge: () => fireNudge(),
   }

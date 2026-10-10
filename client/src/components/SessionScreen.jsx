@@ -20,7 +20,7 @@ function useElapsed() {
 }
 
 export default function SessionScreen({ session, stream, onEnd }) {
-  const { metrics, history, status, nudge, timeline, connected, source, demo, subscribeFrames } = stream
+  const { metrics, history, status, nudge, validation, timeline, connected, source, demo, subscribeFrames } = stream
   const { current, progress, speaking } = useNudgeAudio(nudge, session.voice)
   const elapsed = useElapsed()
   const voice = VOICES.find((v) => v.id === session.voice)
@@ -50,7 +50,12 @@ export default function SessionScreen({ session, stream, onEnd }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
-          <WebcamPanel state={status.state} faceDetected={metrics?.faceDetected} subscribeFrames={subscribeFrames} />
+          <WebcamPanel
+            state={status.state}
+            faceDetected={metrics?.faceDetected}
+            validation={validation}
+            subscribeFrames={subscribeFrames}
+          />
           <StatusOrb state={status.state} reasons={status.reasons} confidence={status.confidence} />
         </div>
         <div className="space-y-6">

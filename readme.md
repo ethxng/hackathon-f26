@@ -44,6 +44,7 @@ npm run dev                 # http://localhost:5173
 ```
 `client/.env` sets `VITE_DATA_SOURCE=ws` (live Presage data from the server). Set it to `mock` for fake data. Demo hotkeys: `1` focused, `2` unfocused, `3` stressed, `N` fire a nudge, `` ` `` toggles the demo panel.
 The WebSocket message contract is in `client/src/lib/contract.js`.
+Presage's capture feedback (e.g. "Face the camera.") is sent as `validation` messages and shown as a hint on the camera preview.
 
 ## Nudge trigger (for the Gemini → ElevenLabs endpoint)
 

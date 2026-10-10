@@ -14,7 +14,7 @@ import {
   validationName,
   statusName,
 } from './presage.js';
-import { assessQuality, createDetector } from './detector.js';
+import { assessQuality, createDetector, DEFAULT_CONFIG } from './detector.js';
 import { sendTrigger, TriggerSkipped } from './trigger.js';
 import { nudgeHandler } from './nudge.js';
 
@@ -63,6 +63,7 @@ wss.on('connection', (ws) => {
       console.log(`[ws] session start (voice=${msg.voice}, ${msg.goalMinutes} min)`);
       // Send where the detector already is; it has been running since boot.
       ws.send(JSON.stringify(currentState));
+      if (currentValidation) ws.send(JSON.stringify(currentValidation));
     } else if (msg.type === 'session:stop') {
       console.log('[ws] session stop');
     }
@@ -78,6 +79,7 @@ wss.on('connection', (ws) => {
 // warmed up by the time someone hits Start in the UI.
 const sdk = createPresage({ apiKey });
 let validationCode = null;
+let currentValidation = null;
 
 const detector = createDetector();
 // The voice persona picked in the UI; the nudge endpoint needs it.
@@ -132,7 +134,18 @@ sdk.on('processingStatus', (s) => console.log(`[presage] ${statusName(s)}`));
 sdk.on('validationStatus', (code, _ts, hint) => {
   if (code === validationCode) return;
   validationCode = code;
-  console.log(`[presage] validation: ${validationName(code)}${hint ? ` — ${hint}` : ''}`);
+  const name = validationName(code);
+  console.log(`[presage] validation: ${name}${hint ? ` — ${hint}` : ''}`);
+  // Presage's hint is written to be shown to users as-is.
+  currentValidation = {
+    type: 'validation',
+    t: Date.now(),
+    code: name,
+    hint: hint || null,
+    ok: name === 'kOk',
+    blocksVitals: DEFAULT_CONFIG.quality.blockingValidation.includes(name),
+  };
+  broadcast(currentValidation);
 });
 sdk.on('error', (code, message) => console.error(`[presage] error ${code}: ${message}`));
 let lastFrameAt = 0;

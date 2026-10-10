@@ -6,8 +6,8 @@
 // States: calibrating -> focused | unfocused (distracted) | overStressed
 
 export const DEFAULT_CONFIG = {
-  // Rules are evaluated over this rolling window.
-  windowMs: 15_000,
+  // Stress rules are evaluated over this rolling window (vitals change slowly).
+  windowMs: 10_000,
 
   // Resting baseline: median of the first N *reliable* pulse/breathing readings.
   baselineSamples: 10,
@@ -16,20 +16,25 @@ export const DEFAULT_CONFIG = {
   maxCalibrationMs: 45_000,
 
   // A new state must hold this long before we switch to it (both directions).
-  holdMs: 3_000,
+  holdMs: 2_000,
 
   unfocused: {
-    lookAwayRatio: 0.5, // face missing / off-center for > 50% of the window
-    talkingRatio: 0.6,
+    // Shorter window than stress, so drifting is caught within ~5s.
+    windowMs: 8_000,
+    lookAwayRatio: 0.35, // looking away for > 35% of the window
+    talkingRatio: 0.5,
+    // Presage validation codes that mean "not looking at the screen".
+    lookAwayValidation: ['kNoFaceFound', 'kFaceNotCentered', 'kFaceNotForward'],
   },
 
   overStressed: {
-    pulseRatio: 1.15, // avg pulse > baseline * 1.15
-    breathingRatio: 1.3,
-    pulseAbs: 100, // used when there's no baseline
-    breathingAbs: 22,
-    strongPulseRatio: 1.25, // this alone is enough
-    tenseExpressionRatio: 0.3,
+    pulseRatio: 1.08, // avg pulse > baseline * 1.08
+    breathingRatio: 1.15,
+    pulseAbs: 95, // used when there's no baseline
+    breathingAbs: 20,
+    strongPulseRatio: 1.10, // either of these alone is enough
+    strongBreathingRatio: 1.25,
+    tenseExpressionRatio: 0.2,
     minSignals: 2, // otherwise need 2 of: pulse, breathing, tense expression
   },
   tenseExpressions: ['angry', 'fear', 'sad', 'disgust', 'contempt'],
@@ -153,21 +158,29 @@ export function createDetector(overrides = {}) {
     }
   }
 
-  function metrics() {
+  const lookAwayCodes = new Set(c.unfocused.lookAwayValidation);
+  // true/false when known, null when there's no face info in the sample.
+  const isLookingAway = (s) => {
+    if (s.validation != null) return lookAwayCodes.has(s.validation);
+    if (s.faceDetected == null && s.faceCentered == null) return null;
+    return s.faceDetected === false || s.faceCentered === false;
+  };
+
+  function metrics(t) {
     const tense = new Set(c.tenseExpressions);
+    const recent = window.filter((s) => s.t > t - c.unfocused.windowMs);
     const withPulse = window.filter((s) => s.pulse != null);
     const withBreath = window.filter((s) => s.breathing != null);
-    const faceKnown = window.filter((s) => s.faceDetected != null || s.faceCentered != null);
+    const faceKnown = recent.filter((s) => isLookingAway(s) != null);
     return {
       avgPulse: round1(weightedMean(withPulse.map((s) => [s.pulse, s.pulseConfidence]))),
       avgBreathing: round1(weightedMean(withBreath.map((s) => [s.breathing, s.breathingConfidence]))),
       pulseCoverage: round2(withPulse.length / window.length),
       meanPulseConfidence: round1(mean(withPulse.map((s) => s.pulseConfidence))),
-      faceCoverage: round2(faceKnown.length / window.length),
-      lookAwayRatio: ratio(window, (s) =>
-        s.faceDetected == null && s.faceCentered == null ? null : s.faceDetected === false || s.faceCentered === false
-      ),
-      talkingRatio: ratio(window, (s) => s.talking),
+      // Distraction metrics use the shorter unfocused window.
+      faceCoverage: round2(faceKnown.length / recent.length),
+      lookAwayRatio: ratio(recent, isLookingAway),
+      talkingRatio: ratio(recent, (s) => s.talking),
       tenseRatio: ratio(window, (s) => (s.expression == null ? null : tense.has(s.expression))),
     };
   }
@@ -177,11 +190,11 @@ export function createDetector(overrides = {}) {
     const reasons = [];
     const excess = [];
     if (m.lookAwayRatio != null && m.lookAwayRatio > r.lookAwayRatio) {
-      reasons.push(`looking away ${pct(m.lookAwayRatio)} of the last ${c.windowMs / 1000}s`);
+      reasons.push(`looking away ${pct(m.lookAwayRatio)} of the last ${r.windowMs / 1000}s`);
       excess.push((m.lookAwayRatio - r.lookAwayRatio) / (1 - r.lookAwayRatio));
     }
     if (m.talkingRatio != null && m.talkingRatio > r.talkingRatio) {
-      reasons.push(`talking ${pct(m.talkingRatio)} of the last ${c.windowMs / 1000}s`);
+      reasons.push(`talking ${pct(m.talkingRatio)} of the last ${r.windowMs / 1000}s`);
       excess.push((m.talkingRatio - r.talkingRatio) / (1 - r.talkingRatio));
     }
     return { reasons, confidence: reasons.length ? stateConfidence(m.faceCoverage, Math.max(...excess)) : null };
@@ -200,14 +213,14 @@ export function createDetector(overrides = {}) {
     const excess = [];
     if (m.avgPulse != null && m.avgPulse > pulseMax) {
       reasons.push(`heart rate ${m.avgPulse} bpm${vs('pulse')}`);
-      excess.push(baseline.pulse != null ? (m.avgPulse / baseline.pulse - r.pulseRatio) / 0.15 : (m.avgPulse - r.pulseAbs) / 15);
+      excess.push(baseline.pulse != null ? (m.avgPulse / baseline.pulse - r.pulseRatio) / 0.1 : (m.avgPulse - r.pulseAbs) / 10);
     }
     if (m.avgBreathing != null && m.avgBreathing > breathMax) {
       reasons.push(`breathing ${m.avgBreathing}/min${vs('breathing')}`);
       excess.push(
         baseline.breathing != null
-          ? (m.avgBreathing / baseline.breathing - r.breathingRatio) / 0.3
-          : (m.avgBreathing - r.breathingAbs) / 6.6
+          ? (m.avgBreathing / baseline.breathing - r.breathingRatio) / 0.2
+          : (m.avgBreathing - r.breathingAbs) / 4
       );
     }
     if (m.tenseRatio != null && m.tenseRatio > r.tenseExpressionRatio) {
@@ -216,7 +229,11 @@ export function createDetector(overrides = {}) {
     }
     const strongPulse =
       baseline.pulse != null && m.avgPulse != null && m.avgPulse > baseline.pulse * r.strongPulseRatio;
-    if (reasons.length < r.minSignals && !strongPulse) return none;
+    const strongBreathing =
+      baseline.breathing != null &&
+      m.avgBreathing != null &&
+      m.avgBreathing > baseline.breathing * r.strongBreathingRatio;
+    if (reasons.length < r.minSignals && !strongPulse && !strongBreathing) return none;
 
     const dataQuality = m.pulseCoverage * ((m.meanPulseConfidence ?? 0) / 100);
     return { reasons, confidence: stateConfidence(dataQuality, Math.max(...excess)) };
@@ -241,7 +258,7 @@ export function createDetector(overrides = {}) {
     window.push(sample);
     window = window.filter((s) => s.t > t - c.windowMs);
     updateBaseline(sample);
-    const m = metrics();
+    const m = metrics(t);
 
     const calibrated = baseline.pulse != null || t - startT >= c.maxCalibrationMs;
     if (!calibrated) {
