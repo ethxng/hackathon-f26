@@ -22,3 +22,12 @@ If the user is determined to be either too over/under stressed or un-focused, we
 
 The generated text is fed into ElevenLabs API to speak towards the user, in the pre-defined voice and style.
 
+
+# Method:
+1. Repurpose *SmartSpectra* electron-quickstart to get cardio, breath, and face data, along with UI/UX elements
+2. Feed data into deterministic algorithm to determine stress and focus levels
+3. Based on algorithm output, call *Gemini* to create a script based on a user-inputted style that will be read by *ElevenLabs*
+4. *ElevenLabs* reads the script out loud to the user in a pre-determined style
+
+
+
