@@ -62,10 +62,30 @@ export function normalize(m, { timestampUs, validationCode } = {}) {
       validationCode == null ? null : validationCode !== ValidationCode.kNoFaceFound,
     faceCentered:
       validationCode == null ? null : validationCode !== ValidationCode.kFaceNotCentered,
+    // False while the head is turned or tilted away from the camera.
+    faceForward:
+      validationCode == null ? null : validationCode !== ValidationCode.kFaceNotForward,
     talking: latest(m.face?.talking)?.detected ?? null,
     blinking: latest(m.face?.blinking)?.detected ?? null,
     expression: topExpression ? EXPRESSION_NAMES[topExpression.type] : null,
     expressionConfidence: conf(topExpression?.confidence),
+  };
+}
+
+// Measurement timestamps are microseconds since epoch, as a number or a protobufjs Long.
+const tsMs = (ts) => Math.round((typeof ts?.toNumber === 'function' ? ts.toNumber() : Number(ts ?? 0)) / 1000);
+const tracePoints = (arr) =>
+  (arr ?? []).filter((p) => p.value != null).map((p) => [tsMs(p.timestamp), Math.round(p.value * 1e4) / 1e4]);
+
+// The series the UI charts, as [tMs, value] pairs: the raw pulse and breathing
+// waveforms and the rate readings. Unlike normalize(), this keeps every point
+// of every metrics event, unfiltered, so the charts show Presage's full rate.
+export function extractTraces(m) {
+  return {
+    pulse: tracePoints(m.cardio?.arterialPressureTrace),
+    breathing: tracePoints(m.breathing?.upperTrace),
+    pulseRate: tracePoints(m.cardio?.pulseRate),
+    breathingRate: tracePoints(m.breathing?.rate),
   };
 }
 

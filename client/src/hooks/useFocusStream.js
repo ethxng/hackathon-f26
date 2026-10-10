@@ -59,6 +59,10 @@ export function useFocusStream() {
   const streamRef = useRef(null)
   // Preview frames bypass React state (15/s would re-render the whole tree).
   const frameListeners = useRef(new Set())
+  // Same for waveform points (~30 messages/s).
+  const traceListeners = useRef(new Set())
+  // Timestamp of the first waveform point of the session: the charts' x = 0.
+  const traceOrigin = useRef(null)
   const lastStateRef = useRef(null)
 
   useEffect(() => {
@@ -67,6 +71,12 @@ export function useFocusStream() {
         case MSG.METRICS:
           setMetrics(msg)
           setHistory((h) => [...h.slice(-(HISTORY_LEN - 1)), msg])
+          break
+        case MSG.TRACE:
+          traceOrigin.current ??= Math.min(
+            ...[msg.pulse, msg.breathing, msg.pulseRate, msg.breathingRate].map((s) => s?.[0]?.[0] ?? Infinity)
+          )
+          traceListeners.current.forEach((fn) => fn(msg, traceOrigin.current))
           break
         case MSG.STATE:
           setStatus({ state: msg.state, reasons: msg.reasons ?? [], confidence: msg.confidence ?? null })
@@ -98,6 +108,7 @@ export function useFocusStream() {
     setHistory([])
     setTimeline([])
     lastStateRef.current = null
+    traceOrigin.current = null
     setMetrics(null)
     setNudge(null)
     setStatus({ state: 'calibrating', reasons: [], confidence: null })
@@ -109,6 +120,11 @@ export function useFocusStream() {
   const subscribeFrames = useCallback((fn) => {
     frameListeners.current.add(fn)
     return () => frameListeners.current.delete(fn)
+  }, [])
+
+  const subscribeTraces = useCallback((fn) => {
+    traceListeners.current.add(fn)
+    return () => traceListeners.current.delete(fn)
   }, [])
 
   return {
@@ -123,6 +139,7 @@ export function useFocusStream() {
     stop,
     // Camera frames from Presage (ws mode only). In mock mode the browser opens the camera itself.
     subscribeFrames: SOURCE === 'ws' ? subscribeFrames : null,
+    subscribeTraces,
     // Only present in mock mode.
     demo: SOURCE === 'mock' ? streamRef : null,
   }

@@ -1,5 +1,5 @@
-// Streams Presage metrics to the frontend over WebSocket, one sample per second,
-// and serves HTTP routes (POST /api/nudge) on the same port.
+// Streams Presage metrics to the frontend over WebSocket, one sample per second
+// (plus the raw pulse/breathing waveforms at Presage's full rate), and serves HTTP routes (POST /api/nudge) on the same port.
 //   npm start
 import 'dotenv/config';
 import http from 'node:http';
@@ -10,6 +10,7 @@ import {
   createPresage,
   createSecondSampler,
   encodePreviewFrame,
+  extractTraces,
   normalize,
   validationName,
   statusName,
@@ -146,6 +147,11 @@ sdk.on('videoOutput', (buf, width, height, stride, pixelFormat) => {
 sdk.on('metrics', (buf, timestampUs) => {
   const decoded = decodeMetrics(buf);
   if (Buffer.isBuffer(decoded)) return;
+  // Chart points go out on every event; everything else is merged to 1Hz below.
+  if (wss.clients.size > 0) {
+    const traces = extractTraces(decoded);
+    if (Object.values(traces).some((points) => points.length)) broadcast({ type: 'trace', ...traces });
+  }
   sampler.push(normalize(decoded, { timestampUs, validationCode }));
 });
 

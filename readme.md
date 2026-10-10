@@ -32,7 +32,7 @@ cp .env.example .env        # add PRESAGE_API_KEY from physiology.presagetech.co
 npm run metrics             # add `-- --raw` to dump one full decoded payload
 ```
 
-**Server** (Presage → WebSocket, one sample/second):
+**Server** (Presage → WebSocket: one `metrics` sample/second for the numbers and the detector, plus `trace` messages carrying every pulse/breathing rate reading and raw waveform point at Presage's full rate for the four charts):
 ```bash
 cd server && npm start      # ws://localhost:3001, opens the camera
 ```

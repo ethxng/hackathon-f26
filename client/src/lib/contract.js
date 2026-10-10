@@ -2,7 +2,10 @@
 //
 // Server -> client:
 //   { type: 'metrics', t, pulse, pulseConfidence, pulseReliable, breathing, breathingConfidence, breathingReliable,
-//                      hrv, faceDetected, faceCentered, talking, blinking, expression }   // confidences 0–100
+//                      hrv, faceDetected, faceCentered, faceForward, talking, blinking, expression }   // confidences 0–100
+//   { type: 'trace',   pulse: [[t, value], ...], breathing: [...], pulseRate: [...], breathingRate: [...] }
+//     ^ every point Presage produced since the last event (~30 events/s; 'metrics' is 1/s):
+//       the raw pulse/breathing waveforms and the bpm / breaths-per-minute readings. t is ms since epoch.
 //   { type: 'state',   t, state, reasons: [], confidence }                                // confidence 0–1 or null
 //   { type: 'nudge',   t, state, reasons, text, audio }   // audio: base64 mp3 from ElevenLabs (optional)
 //     ^ sent after the server POSTs a detector trigger to the nudge endpoint (see server/src/trigger.js)
@@ -13,6 +16,7 @@
 
 export const MSG = {
   METRICS: 'metrics',
+  TRACE: 'trace',
   STATE: 'state',
   NUDGE: 'nudge',
   SESSION_START: 'session:start',

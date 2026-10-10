@@ -5,6 +5,7 @@ import { MSG } from './contract.js'
 
 const CALIBRATION_MS = 6000
 const NUDGE_DELAY_MS = 4000
+const TRACE_HZ = 30
 
 const PROFILES = {
   focused: { pulse: 72, breathing: 14, faceDetected: true, talking: false },
@@ -38,6 +39,7 @@ const CANNED_TEXT = {
 
 const jitter = (base, amount) => base + (Math.random() - 0.5) * amount * 2
 const round1 = (v) => Math.round(v * 10) / 10
+const round3 = (v) => Math.round(v * 1000) / 1000
 
 export function createMockStream({ onMessage, onOpen }) {
   let timer = null
@@ -47,6 +49,10 @@ export function createMockStream({ onMessage, onOpen }) {
   let voice = 'calm'
   let current = { ...PROFILES.focused }
   let nudgeTimer = null
+  let traceTimer = null
+  let lastTraceAt = 0
+  let pulsePhase = 0
+  let breathPhase = 0
 
   const emit = (msg) => onMessage({ t: Date.now(), ...msg })
 
@@ -86,11 +92,36 @@ export function createMockStream({ onMessage, onOpen }) {
       hrv: round1(jitter(scenario === 'overStressed' ? 22 : 45, 3)),
       faceDetected: target.faceDetected,
       faceCentered: target.faceDetected,
+      faceForward: target.faceDetected,
       talking: target.talking,
       blinking: Math.random() < 0.2,
       expression: scenario === 'overStressed' ? 'fear' : 'neutral',
     })
     setState(Date.now() - startedAt < CALIBRATION_MS ? 'calibrating' : scenario)
+  }
+
+  // Fake waveforms: one beat / breath per cycle at the current rates. Phase is
+  // accumulated so the wave stays continuous when the rate changes.
+  function traceTick() {
+    const now = Date.now()
+    const dt = (now - lastTraceAt) / 1000
+    lastTraceAt = now
+    pulsePhase += (current.pulse / 60) * dt
+    breathPhase += (current.breathing / 60) * dt
+    const beat = Math.exp(-(((pulsePhase % 1) - 0.2) ** 2) / 0.006) + 0.35 * Math.exp(-(((pulsePhase % 1) - 0.5) ** 2) / 0.02)
+    onMessage({
+      type: MSG.TRACE,
+      pulse: [[now, round3(jitter(beat, 0.02))]],
+      breathing: [[now, round3(jitter(Math.sin(2 * Math.PI * breathPhase), 0.03))]],
+      pulseRate: [[now, round1(jitter(current.pulse, 0.4))]],
+      breathingRate: [[now, round1(jitter(current.breathing, 0.2))]],
+    })
+  }
+
+  function stopTimers() {
+    clearInterval(timer)
+    clearInterval(traceTimer)
+    clearTimeout(nudgeTimer)
   }
 
   return {
@@ -100,20 +131,20 @@ export function createMockStream({ onMessage, onOpen }) {
         startedAt = Date.now()
         scenario = 'focused'
         state = null
-        clearInterval(timer)
+        stopTimers()
         timer = setInterval(tick, 1000)
+        lastTraceAt = Date.now()
+        traceTimer = setInterval(traceTick, 1000 / TRACE_HZ)
         tick()
       } else if (msg.type === MSG.SESSION_STOP) {
-        clearInterval(timer)
-        clearTimeout(nudgeTimer)
+        stopTimers()
       }
     },
     connect() {
       queueMicrotask(() => onOpen?.())
     },
     close() {
-      clearInterval(timer)
-      clearTimeout(nudgeTimer)
+      stopTimers()
     },
     // Demo controls
     setScenario(next) {

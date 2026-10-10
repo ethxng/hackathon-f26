@@ -4,7 +4,7 @@
 import 'dotenv/config';
 import { inspect } from 'node:util';
 import { decodeMetrics, ValidationCode } from '@smartspectra/node-sdk';
-import { createPresage, createSecondSampler, normalize, validationName, statusName } from '../src/presage.js';
+import { createPresage, createSecondSampler, extractTraces, normalize, validationName, statusName } from '../src/presage.js';
 
 const apiKey = process.env.PRESAGE_API_KEY;
 if (!apiKey) {
@@ -20,7 +20,10 @@ const sdk = createPresage({ apiKey });
 let validationCode = null;
 let dumpedRaw = false;
 
-const sampler = createSecondSampler((m, events) =>
+// Chart points received per series since the last printed line.
+let tracePoints = {};
+
+const sampler = createSecondSampler((m, events) => {
   console.log(
     [
       new Date().toLocaleTimeString(),
@@ -29,13 +32,15 @@ const sampler = createSecondSampler((m, events) =>
       `hrv ${fmt(m.hrv)}`,
       `face ${flag(m.faceDetected)}`,
       `centered ${flag(m.faceCentered)}`,
+      `forward ${flag(m.faceForward)}`,
       `talking ${flag(m.talking)}`,
       `blink ${flag(m.blinking)}`,
       `expr ${m.expression ?? '—'}`,
-      `(${events} events)`,
+      `(${events} events; points: ${Object.entries(tracePoints).map(([k, n]) => `${k} ${n}`).join(', ')})`,
     ].join('  ')
-  )
-);
+  );
+  tracePoints = {};
+});
 
 sdk.on('processingStatus', (s) => console.log(`[status] ${statusName(s)}`));
 
@@ -61,6 +66,9 @@ sdk.on('metrics', (buf, timestampUs) => {
     console.log(inspect(decoded.toJSON?.() ?? decoded, { depth: 6, colors: true }));
   }
 
+  for (const [key, points] of Object.entries(extractTraces(decoded))) {
+    tracePoints[key] = (tracePoints[key] ?? 0) + points.length;
+  }
   sampler.push(normalize(decoded, { timestampUs, validationCode }));
 });
 

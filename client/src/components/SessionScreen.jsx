@@ -8,6 +8,17 @@ import NudgeToast from './NudgeToast.jsx'
 import Timeline from './Timeline.jsx'
 import DemoControls from './DemoControls.jsx'
 
+// The same four charts as Presage's electron-quickstart. The rate charts grow
+// for the whole session; the raw waveforms scroll.
+const PULSE_CHARTS = [
+  { series: 'pulseRate', title: 'Pulse rate', unit: 'BPM' },
+  { series: 'pulse', title: 'Arterial pressure trace', unit: 'raw', windowSec: 15 },
+]
+const BREATHING_CHARTS = [
+  { series: 'breathingRate', title: 'Breathing rate', unit: 'BR/min' },
+  { series: 'breathing', title: 'Breathing waveform', unit: 'raw', windowSec: 30 },
+]
+
 function useElapsed() {
   const [start] = useState(() => Date.now())
   const [now, setNow] = useState(start)
@@ -20,7 +31,7 @@ function useElapsed() {
 }
 
 export default function SessionScreen({ session, stream, onEnd }) {
-  const { metrics, history, status, nudge, timeline, connected, source, demo, subscribeFrames } = stream
+  const { metrics, status, nudge, timeline, connected, source, demo, subscribeFrames, subscribeTraces } = stream
   const { current, progress, speaking } = useNudgeAudio(nudge, session.voice)
   const elapsed = useElapsed()
   const voice = VOICES.find((v) => v.id === session.voice)
@@ -61,8 +72,9 @@ export default function SessionScreen({ session, stream, onEnd }) {
               value={metrics?.pulse}
               reliable={metrics?.pulseReliable}
               confidence={metrics?.pulseConfidence}
-              values={history.map((m) => (m.pulseReliable ? m.pulse : null))}
               color="#fb7185"
+              subscribeTraces={subscribeTraces}
+              charts={PULSE_CHARTS}
               highlight={stressNudge}
             />
             <VitalCard
@@ -71,8 +83,9 @@ export default function SessionScreen({ session, stream, onEnd }) {
               value={metrics?.breathing}
               reliable={metrics?.breathingReliable}
               confidence={metrics?.breathingConfidence}
-              values={history.map((m) => (m.breathingReliable ? m.breathing : null))}
               color="#38bdf8"
+              subscribeTraces={subscribeTraces}
+              charts={BREATHING_CHARTS}
               highlight={stressNudge}
             />
           </div>

@@ -1,20 +1,7 @@
-function Sparkline({ values, color }) {
-  const nums = values.filter((v) => v != null)
-  if (nums.length < 2) return <div className="h-12" />
-  const min = Math.min(...nums)
-  const max = Math.max(...nums)
-  const span = max - min || 1
-  const w = 200
-  const h = 48
-  const pts = nums.map((v, i) => `${(i / (nums.length - 1)) * w},${h - ((v - min) / span) * (h - 6) - 3}`)
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-12 w-full">
-      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-    </svg>
-  )
-}
+import TraceChart from './TraceChart.jsx'
 
-export default function VitalCard({ label, unit, value, values, color, highlight, reliable, confidence }) {
+// `charts` is a list of TraceChart props ({ series, title, unit, windowSec }) drawn under the number.
+export default function VitalCard({ label, unit, value, color, highlight, reliable, confidence, subscribeTraces, charts }) {
   return (
     <div
       className={`rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition ${highlight ? 'animate-flash' : ''}`}
@@ -41,7 +28,9 @@ export default function VitalCard({ label, unit, value, values, color, highlight
           </div>
         </div>
       )}
-      <Sparkline values={values} color={color} />
+      {charts.map((c) => (
+        <TraceChart key={c.series} subscribeTraces={subscribeTraces} color={color} {...c} />
+      ))}
     </div>
   )
 }

@@ -47,13 +47,27 @@ test('face missing → unfocused only after the hold time, then recovers', () =>
   const d = calibrated();
   const away = run(d, 15, () => ({ faceDetected: false }), 20);
   const firstUnfocused = away.findIndex((r) => r.state === 'unfocused');
-  // Needs > 50% of the 15s window away (8 samples) plus the 3s hold.
-  assert.ok(firstUnfocused >= 10, `switched too early at +${firstUnfocused}s`);
+  // Needs 5s away (5 samples) plus the 3s hold.
+  assert.equal(firstUnfocused, 7);
   assert.match(away.at(-1).reasons[0], /looking away/);
 
   const back = run(d, 20, () => ({}), 35);
   assert.equal(back.at(-1).state, 'focused');
   assert.deepEqual(back.at(-1).reasons, []);
+});
+
+test('face turned away from the camera → unfocused', () => {
+  const d = calibrated();
+  const r = run(d, 15, () => ({ validation: 'kFaceNotForward', faceForward: false }), 20);
+  assert.equal(r.findIndex((x) => x.state === 'unfocused'), 7);
+  assert.match(r.at(-1).reasons[0], /looking away/);
+});
+
+test('lookAwayMs sets how long the face must be away', () => {
+  const d = createDetector({ unfocused: { lookAwayMs: 8_000 } });
+  run(d, 20);
+  const r = run(d, 15, () => ({ faceDetected: false }), 20);
+  assert.equal(r.findIndex((x) => x.state === 'unfocused'), 10);
 });
 
 test('a single glance away does not flip the state', () => {

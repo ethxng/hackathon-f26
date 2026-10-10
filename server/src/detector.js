@@ -19,7 +19,9 @@ export const DEFAULT_CONFIG = {
   holdMs: 3_000,
 
   unfocused: {
-    lookAwayRatio: 0.5, // face missing / off-center for > 50% of the window
+    // Time within the window the face must be missing, off-center or turned
+    // away before it counts as drifting. The hold time is added on top.
+    lookAwayMs: 5_000,
     talkingRatio: 0.6,
   },
 
@@ -157,16 +159,19 @@ export function createDetector(overrides = {}) {
     const tense = new Set(c.tenseExpressions);
     const withPulse = window.filter((s) => s.pulse != null);
     const withBreath = window.filter((s) => s.breathing != null);
-    const faceKnown = window.filter((s) => s.faceDetected != null || s.faceCentered != null);
+    // null = face status unknown; true = missing, off-center or turned away.
+    const lookingAway = (s) => {
+      const flags = [s.faceDetected, s.faceCentered, s.faceForward];
+      return flags.every((f) => f == null) ? null : flags.includes(false);
+    };
+    const faceKnown = window.filter((s) => lookingAway(s) != null);
     return {
       avgPulse: round1(weightedMean(withPulse.map((s) => [s.pulse, s.pulseConfidence]))),
       avgBreathing: round1(weightedMean(withBreath.map((s) => [s.breathing, s.breathingConfidence]))),
       pulseCoverage: round2(withPulse.length / window.length),
       meanPulseConfidence: round1(mean(withPulse.map((s) => s.pulseConfidence))),
       faceCoverage: round2(faceKnown.length / window.length),
-      lookAwayRatio: ratio(window, (s) =>
-        s.faceDetected == null && s.faceCentered == null ? null : s.faceDetected === false || s.faceCentered === false
-      ),
+      lookAwayRatio: ratio(window, lookingAway),
       talkingRatio: ratio(window, (s) => s.talking),
       tenseRatio: ratio(window, (s) => (s.expression == null ? null : tense.has(s.expression))),
     };
@@ -176,9 +181,10 @@ export function createDetector(overrides = {}) {
     const r = c.unfocused;
     const reasons = [];
     const excess = [];
-    if (m.lookAwayRatio != null && m.lookAwayRatio > r.lookAwayRatio) {
+    const lookAwayMin = r.lookAwayMs / c.windowMs;
+    if (m.lookAwayRatio != null && m.lookAwayRatio >= lookAwayMin) {
       reasons.push(`looking away ${pct(m.lookAwayRatio)} of the last ${c.windowMs / 1000}s`);
-      excess.push((m.lookAwayRatio - r.lookAwayRatio) / (1 - r.lookAwayRatio));
+      excess.push((m.lookAwayRatio - lookAwayMin) / (1 - lookAwayMin));
     }
     if (m.talkingRatio != null && m.talkingRatio > r.talkingRatio) {
       reasons.push(`talking ${pct(m.talkingRatio)} of the last ${c.windowMs / 1000}s`);
