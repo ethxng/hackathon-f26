@@ -59,11 +59,13 @@ Request body:
   "confidence": 0.73,
   "metrics": { "avgPulse": 72.4, "avgBreathing": 14.1, "lookAwayRatio": 0.73, "talkingRatio": 0, "tenseRatio": 0, "pulseCoverage": 0.9 },
   "baseline": { "pulse": 70, "breathing": 14 },
-  "voice": "calm",
+  "gender": "female",
+  "tone": "sarcastic",
   "at": 1791660000000
 }
 ```
-`state` is `unfocused` or `overStressed`; `voice` is `calm`, `coach`, `buddy` or `mentor` (picked in the UI).
+`state` is `unfocused` or `overStressed`; `gender` is `male` or `female` and `tone` is `chill`, `sarcastic` or `strict` (picked in the UI).
+`nudgeHandler` (`server/src/nudge.js`) searches ElevenLabs for a matching voice; this needs the API key's **Voices → Read** permission, otherwise it uses a built-in voice per gender/tone.
 
 Expected response: `{ "text": "...", "audio": "<base64 mp3, optional>" }`. The server forwards it to the browser,
 which shows the text and plays the audio (or uses browser speech if `audio` is missing).

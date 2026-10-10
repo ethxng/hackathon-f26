@@ -17,22 +17,19 @@ const REASONS = {
   overStressed: ['heart rate 101 bpm (baseline 72)', 'breathing 23/min (baseline 14)'],
 }
 
+// Keyed by tone, mirroring the server's placeholder lines.
 const CANNED_TEXT = {
-  calm: {
-    unfocused: "Hey, it looks like your mind wandered off. That's okay. Gently bring your eyes back to the page.",
-    overStressed: "Your heart's racing a little. Let's breathe in for four, hold, and out for six. You've got time.",
+  chill: {
+    unfocused: "Hey, no stress, but your attention wandered off. Let's ease back into it.",
+    overStressed: "You seem a little wound up. Breathe in slow, breathe out slower. You've got this.",
   },
-  coach: {
-    unfocused: "Eyes up, champ! The finish line is right there. Let's lock back in!",
-    overStressed: "Whoa, pace yourself! Shake it out, one big breath, and attack it again.",
+  sarcastic: {
+    unfocused: 'Wow, that wall must be fascinating. Your work misses you, by the way.',
+    overStressed: "Your heart's racing like you're defusing a bomb. It's homework. Breathe.",
   },
-  buddy: {
-    unfocused: 'Psst, we kinda drifted there. Wanna jump back in? Just one more section.',
-    overStressed: "Hey, you seem pretty stressed. Quick stretch? I'll wait.",
-  },
-  mentor: {
-    unfocused: 'You looked away again. Put the distraction down and finish this problem.',
-    overStressed: 'Your vitals are spiking. Stop, breathe for ten seconds, then continue.',
+  strict: {
+    unfocused: 'Eyes back on your work. Now. You can look around when the session is over.',
+    overStressed: 'Stop. Take three slow breaths, then continue. Panicking will not finish this faster.',
   },
 }
 
@@ -50,7 +47,7 @@ export function createMockStream({ onMessage, onOpen }) {
   let startedAt = 0
   let scenario = 'focused'
   let state = null
-  let voice = 'calm'
+  let tone = 'chill'
   let current = { ...PROFILES.focused }
   let nudgeTimer = null
   let validationTimer = null
@@ -71,7 +68,7 @@ export function createMockStream({ onMessage, onOpen }) {
 
   function fireNudge(forState = state) {
     const s = forState === 'unfocused' || forState === 'overStressed' ? forState : 'unfocused'
-    emit({ type: MSG.NUDGE, state: s, reasons: REASONS[s], text: CANNED_TEXT[voice][s], audio: null })
+    emit({ type: MSG.NUDGE, state: s, reasons: REASONS[s], text: (CANNED_TEXT[tone] ?? CANNED_TEXT.chill)[s], audio: null })
   }
 
   function tick() {
@@ -104,7 +101,7 @@ export function createMockStream({ onMessage, onOpen }) {
   return {
     send(msg) {
       if (msg.type === MSG.SESSION_START) {
-        voice = msg.voice ?? voice
+        tone = msg.tone ?? tone
         startedAt = Date.now()
         scenario = 'focused'
         state = null

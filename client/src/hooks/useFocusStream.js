@@ -98,7 +98,7 @@ export function useFocusStream() {
     return () => stream.close()
   }, [])
 
-  const start = useCallback(({ voice, goalMinutes }) => {
+  const start = useCallback(({ gender, tone, goalMinutes }) => {
     setHistory([])
     setTimeline([])
     lastStateRef.current = null
@@ -106,7 +106,7 @@ export function useFocusStream() {
     setNudge(null)
     setValidation(null)
     setStatus({ state: 'calibrating', reasons: [], confidence: null })
-    streamRef.current?.send({ type: MSG.SESSION_START, voice, goalMinutes })
+    streamRef.current?.send({ type: MSG.SESSION_START, gender, tone, goalMinutes })
   }, [])
 
   const stop = useCallback(() => streamRef.current?.send({ type: MSG.SESSION_STOP }), [])

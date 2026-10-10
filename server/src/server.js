@@ -59,8 +59,8 @@ wss.on('connection', (ws) => {
       return;
     }
     if (msg.type === 'session:start') {
-      sessionVoice = msg.voice ?? sessionVoice;
-      console.log(`[ws] session start (voice=${msg.voice}, ${msg.goalMinutes} min)`);
+      session = { gender: msg.gender ?? session.gender, tone: msg.tone ?? session.tone };
+      console.log(`[ws] session start (gender=${session.gender}, tone=${session.tone}, ${msg.goalMinutes} min)`);
       // Send where the detector already is; it has been running since boot.
       ws.send(JSON.stringify(currentState));
       if (currentValidation) ws.send(JSON.stringify(currentValidation));
@@ -82,8 +82,8 @@ let validationCode = null;
 let currentValidation = null;
 
 const detector = createDetector();
-// The voice persona picked in the UI; the nudge endpoint needs it.
-let sessionVoice = 'calm';
+// Voice choice from the UI; the nudge endpoint needs it.
+let session = { gender: 'female', tone: 'chill' };
 let currentState = { type: 'state', t: Date.now(), state: detector.state, reasons: [], confidence: null };
 
 const sampler = createSecondSampler((sample) => {
@@ -117,8 +117,8 @@ const sampler = createSecondSampler((sample) => {
 // the result to the browser. Not awaited, so a slow call never stalls the 1Hz stream.
 function nudge(trigger) {
   const startedAt = Date.now();
-  console.log(`[nudge] → ${trigger.state} (voice=${sessionVoice})`);
-  sendTrigger(trigger, { voice: sessionVoice })
+  console.log(`[nudge] → ${trigger.state} (gender=${session.gender}, tone=${session.tone})`);
+  sendTrigger(trigger, session)
     .then(({ text, audio }) => {
       const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
       const audioInfo = audio ? `audio ${Math.round((audio.length * 3) / 4 / 1024)}KB` : 'no audio';

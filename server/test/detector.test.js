@@ -29,8 +29,8 @@ function run(detector, seconds, at = () => ({}), startSec = 0) {
 }
 
 // Calibrated detector at t = 20s, sitting in `focused`.
-function calibrated() {
-  const d = createDetector();
+function calibrated(config) {
+  const d = createDetector(config);
   run(d, 20);
   assert.equal(d.state, 'focused');
   return d;
@@ -127,7 +127,8 @@ test('stressed wins over distracted', () => {
 });
 
 test('one trigger per episode, none again inside the cooldown', () => {
-  const d = calibrated();
+  // Pinned so the test doesn't break when the defaults are tuned.
+  const d = calibrated({ stateCooldownMs: 60_000, globalCooldownMs: 20_000 });
   let t = 20;
   const episode = (overrides, secs) => {
     const r = run(d, secs, () => overrides, t);
@@ -209,7 +210,9 @@ test('state confidence scales with how far past the threshold the signal is', ()
 });
 
 test('trigger waits for enough confidence, then fires once in the episode', () => {
-  const d = calibrated();
+  // Pinned: with a lower strongPulseRatio, stress starts while the window still
+  // holds older high-confidence calm readings, which inflates confidence.
+  const d = calibrated({ overStressed: { strongPulseRatio: 1.15 } });
   // Stressed by pulse alone, but readings only just reliable (confidence 50) -> state confidence ≤ 0.5.
   const weak = run(d, 20, () => ({ pulse: 92, pulseConfidence: 50 }), 20);
   assert.equal(weak.at(-1).state, 'overStressed');

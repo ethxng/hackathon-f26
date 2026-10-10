@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { VOICES } from '../lib/contract.js'
+import { GENDERS, speechSettings, toneOf } from '../lib/contract.js'
+import ToneKnob from './ToneKnob.jsx'
 
 const LENGTHS = [25, 45, 60]
 
 export default function SetupScreen({ onStart }) {
-  const [voice, setVoice] = useState(VOICES[0].id)
+  const [gender, setGender] = useState(GENDERS[0].id)
+  const [tone, setTone] = useState('chill')
   const [goalMinutes, setGoalMinutes] = useState(25)
+  const toneInfo = toneOf(tone)
 
-  const preview = (v) => {
+  const preview = () => {
     window.speechSynthesis?.cancel()
-    const u = new SpeechSynthesisUtterance(v.sample)
-    u.rate = v.speech.rate
-    u.pitch = v.speech.pitch
+    const u = new SpeechSynthesisUtterance(toneInfo.sample)
+    Object.assign(u, speechSettings({ gender, tone }))
     window.speechSynthesis?.speak(u)
   }
 
@@ -26,39 +28,41 @@ export default function SetupScreen({ onStart }) {
           </p>
         </div>
 
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Choose your voice</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {VOICES.map((v) => {
-            const selected = v.id === voice
-            return (
-              <button
-                key={v.id}
-                onClick={() => setVoice(v.id)}
-                className={`group rounded-2xl border p-5 text-left transition ${
-                  selected
-                    ? 'border-emerald-400/70 bg-emerald-400/10'
-                    : 'border-white/10 bg-white/[0.03] hover:border-white/25'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">{v.name}</span>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      preview(v)
-                    }}
-                    className="rounded-full border border-white/15 px-3 py-1 text-xs text-slate-300 hover:bg-white/10"
-                  >
-                    ▶ Preview
-                  </span>
-                </div>
-                <div className="mt-1 text-sm text-slate-400">{v.tone}</div>
-                <div className="mt-3 text-sm italic text-slate-300/80">“{v.sample}”</div>
-              </button>
-            )
-          })}
+        <div className="grid gap-6 sm:grid-cols-[220px_1fr]">
+          <section>
+            <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Voice</h2>
+            <div className="flex rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+              {GENDERS.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setGender(g.id)}
+                  aria-pressed={g.id === gender}
+                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                    g.id === gender ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Tone</h2>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 pb-5 pt-2">
+              <ToneKnob value={tone} onChange={setTone} />
+              <div className="text-center">
+                <div className="text-sm text-slate-400">{toneInfo.blurb}</div>
+                <div className="mt-2 text-sm italic text-slate-300/80">“{toneInfo.sample}”</div>
+                <button
+                  onClick={preview}
+                  className="mt-4 rounded-full border border-white/15 px-4 py-1.5 text-xs text-slate-300 hover:bg-white/10"
+                >
+                  ▶ Preview
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
 
         <h2 className="mt-10 mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Session length</h2>
@@ -77,7 +81,7 @@ export default function SetupScreen({ onStart }) {
         </div>
 
         <button
-          onClick={() => onStart({ voice, goalMinutes })}
+          onClick={() => onStart({ gender, tone, goalMinutes })}
           className="mt-12 w-full rounded-2xl bg-emerald-400 py-4 text-lg font-semibold text-slate-950 transition hover:bg-emerald-300"
         >
           Start focus session

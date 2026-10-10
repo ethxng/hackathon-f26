@@ -1,10 +1,9 @@
-import { STATES, VOICES } from '../lib/contract.js'
+import { STATES, voiceLabel } from '../lib/contract.js'
 
 // The hero moment: Gemini's words appear in sync with the ElevenLabs voice.
-export default function NudgeToast({ nudge, progress, speaking, voiceId }) {
+export default function NudgeToast({ nudge, progress, speaking, session }) {
   if (!nudge) return null
   const color = STATES[nudge.state]?.color ?? '#fff'
-  const voice = VOICES.find((v) => v.id === voiceId)
   const words = nudge.text.split(' ')
   const shown = Math.ceil(progress * words.length)
 
@@ -25,7 +24,7 @@ export default function NudgeToast({ nudge, progress, speaking, voiceId }) {
           ))}
         </div>
         <span className="text-sm font-medium" style={{ color }}>
-          {voice?.name ?? 'Focus Up'}
+          {voiceLabel(session)}
         </span>
         <span className="text-sm text-slate-500">· {STATES[nudge.state]?.label}</span>
       </div>

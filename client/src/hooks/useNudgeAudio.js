@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { VOICES } from '../lib/contract.js'
+import { speechSettings } from '../lib/contract.js'
 
 // Plays nudges one at a time (never overlapping) and reports playback progress
 // (0..1) so the text can be revealed in sync with the voice. Uses the
 // ElevenLabs mp3 when present, otherwise falls back to browser speech.
-export function useNudgeAudio(nudge, voiceId) {
+export function useNudgeAudio(nudge, session) {
   const [current, setCurrent] = useState(null)
   const [progress, setProgress] = useState(0)
   const queue = useRef([])
@@ -42,10 +42,8 @@ export function useNudgeAudio(nudge, voiceId) {
       audio.onerror = done
       audio.play().catch(done)
     } else if (window.speechSynthesis) {
-      const voice = VOICES.find((v) => v.id === voiceId) ?? VOICES[0]
       const u = new SpeechSynthesisUtterance(item.text)
-      u.rate = voice.speech.rate
-      u.pitch = voice.speech.pitch
+      Object.assign(u, speechSettings(session))
       u.onboundary = (e) => setProgress((e.charIndex + (e.charLength || 0)) / item.text.length)
       u.onend = done
       u.onerror = done

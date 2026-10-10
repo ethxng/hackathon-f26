@@ -68,8 +68,8 @@ export const DEFAULT_CONFIG = {
   },
 
   // Gemini trigger rate limits.
-  stateCooldownMs: 60_000,
-  globalCooldownMs: 20_000,
+  stateCooldownMs: 20_000,
+  globalCooldownMs: 10_000,
 };
 
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);

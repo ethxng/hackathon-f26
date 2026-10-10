@@ -4,7 +4,7 @@
 // Request body (POST, JSON):
 //   { state: 'unfocused'|'overStressed', reasons: string[], confidence: number (0–1),
 //     metrics: { avgPulse, avgBreathing, lookAwayRatio, talkingRatio, tenseRatio, pulseCoverage, ... },
-//     baseline: { pulse, breathing }, voice: 'calm'|'coach'|'buddy'|'mentor', at: number (ms) }
+//     baseline: { pulse, breathing }, gender: 'male'|'female', tone: 'chill'|'sarcastic'|'strict', at: number (ms) }
 // Expected response (JSON):
 //   { text: string, audio?: string }   // audio = base64 mp3
 
@@ -14,7 +14,7 @@ let inFlight = false;
 
 export class TriggerSkipped extends Error {}
 
-export async function sendTrigger(trigger, { voice }) {
+export async function sendTrigger(trigger, { gender, tone }) {
   if (inFlight) throw new TriggerSkipped('previous nudge still in flight');
   const url = process.env.NUDGE_URL ?? 'http://localhost:3001/api/nudge';
   inFlight = true;
@@ -27,7 +27,7 @@ export async function sendTrigger(trigger, { voice }) {
       res = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ state, reasons, confidence, metrics, baseline, voice, at }),
+        body: JSON.stringify({ state, reasons, confidence, metrics, baseline, gender, tone, at }),
         signal: controller.signal,
       });
     } catch (err) {

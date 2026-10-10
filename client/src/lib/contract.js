@@ -10,7 +10,7 @@
 //     ^ sent after the server POSTs a detector trigger to the nudge endpoint (see server/src/trigger.js)
 //       and gets back { text, audio }.
 // Client -> server:
-//   { type: 'session:start', voice, goalMinutes }
+//   { type: 'session:start', gender: 'male'|'female', tone: 'chill'|'sarcastic'|'strict', goalMinutes }
 //   { type: 'session:stop' }
 
 export const MSG = {
@@ -45,33 +45,45 @@ export const STATES = {
   },
 }
 
-export const VOICES = [
+export const GENDERS = [
+  { id: 'female', label: 'Female' },
+  { id: 'male', label: 'Male' },
+]
+
+// Order matters: it's the knob's left → right positions.
+export const TONES = [
   {
-    id: 'calm',
-    name: 'Calm Guide',
-    tone: 'Soft, slow, reassuring',
-    sample: 'Hey, take a slow breath with me. You are doing fine.',
-    speech: { rate: 0.85, pitch: 0.9 },
+    id: 'chill',
+    color: '#5eead4',
+    label: 'Chill',
+    blurb: 'Soft, easygoing, no pressure.',
+    sample: "Hey, no stress. Let's ease back into it whenever you're ready.",
+    speech: { rate: 0.9, pitch: 1 },
   },
   {
-    id: 'coach',
-    name: 'Hype Coach',
-    tone: 'Energetic, motivating',
-    sample: "Let's go! Eyes back on the prize — you've got this!",
-    speech: { rate: 1.15, pitch: 1.1 },
+    id: 'sarcastic',
+    color: '#c084fc',
+    label: 'Sarcastic',
+    blurb: 'Dry wit. Roasts you back to work.',
+    sample: 'Wow, that wall must be fascinating. Your work misses you, by the way.',
+    speech: { rate: 1.05, pitch: 1.05 },
   },
   {
-    id: 'buddy',
-    name: 'Study Buddy',
-    tone: 'Casual, friendly',
-    sample: 'Psst, looks like we got distracted. Wanna jump back in?',
-    speech: { rate: 1, pitch: 1.05 },
-  },
-  {
-    id: 'mentor',
-    name: 'Strict Mentor',
-    tone: 'Direct, no-nonsense',
-    sample: 'Focus. Close the other tab and finish this section.',
-    speech: { rate: 0.95, pitch: 0.8 },
+    id: 'strict',
+    color: '#fbbf24',
+    label: 'Strict',
+    blurb: 'Direct and no-nonsense.',
+    sample: 'Eyes back on your work. Now.',
+    speech: { rate: 1, pitch: 0.9 },
   },
 ]
+
+export const toneOf = (id) => TONES.find((t) => t.id === id) ?? TONES[0]
+export const voiceLabel = ({ gender, tone }) =>
+  `${toneOf(tone).label} · ${GENDERS.find((g) => g.id === gender)?.label ?? ''}`
+
+// Browser-speech fallback settings (used for previews and when a nudge has no audio).
+export function speechSettings({ gender, tone }) {
+  const { rate, pitch } = toneOf(tone).speech
+  return { rate, pitch: gender === 'female' ? pitch * 1.25 : pitch * 0.85 }
+}

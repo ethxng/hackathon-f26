@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { VOICES } from '../lib/contract.js'
+import { voiceLabel } from '../lib/contract.js'
 import { useNudgeAudio } from '../hooks/useNudgeAudio.js'
 import WebcamPanel from './WebcamPanel.jsx'
 import StatusOrb from './StatusOrb.jsx'
@@ -21,9 +21,8 @@ function useElapsed() {
 
 export default function SessionScreen({ session, stream, onEnd }) {
   const { metrics, history, status, nudge, validation, timeline, connected, source, demo, subscribeFrames } = stream
-  const { current, progress, speaking } = useNudgeAudio(nudge, session.voice)
+  const { current, progress, speaking } = useNudgeAudio(nudge, session)
   const elapsed = useElapsed()
-  const voice = VOICES.find((v) => v.id === session.voice)
   const stressNudge = current?.state === 'overStressed'
 
   return (
@@ -37,7 +36,7 @@ export default function SessionScreen({ session, stream, onEnd }) {
           <span className="tabular-nums text-lg text-slate-200">
             {elapsed} <span className="text-sm text-slate-500">/ {session.goalMinutes}:00</span>
           </span>
-          <span>🎙 {voice?.name}</span>
+          <span>🎙 {voiceLabel(session)}</span>
           <span className="flex items-center gap-1.5">
             <span className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
             {source === 'mock' ? 'Demo data' : connected ? 'Live' : 'Reconnecting…'}
@@ -85,7 +84,7 @@ export default function SessionScreen({ session, stream, onEnd }) {
         </div>
       </div>
 
-      <NudgeToast nudge={current} progress={progress} speaking={speaking} voiceId={session.voice} />
+      <NudgeToast nudge={current} progress={progress} speaking={speaking} session={session} />
       {demo && <DemoControls demo={demo} />}
     </div>
   )
