@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-[#0b0d12] text-slate-100 font-sans antialiased;
+}
+
+/* Soft breathing animation for the status orb. */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes ripple {
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(1.9); opacity: 0; }
+}
+@keyframes slide-up {
+  from { transform: translate(-50%, 24px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+@keyframes flash {
+  0% { box-shadow: 0 0 0 0 var(--flash-color); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+
+.animate-breathe { animation: breathe 5s ease-in-out infinite; }
+.animate-ripple { animation: ripple 2.4s ease-out infinite; }
+.animate-slide-up { animation: slide-up 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.animate-bar { animation: bar 0.9s ease-in-out infinite; transform-origin: bottom; }
+.animate-flash { animation: flash 1.2s ease-out 3; }
