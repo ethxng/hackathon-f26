@@ -43,7 +43,7 @@ export default function SessionScreen({ session, stream, onEnd }) {
               className="h-3 w-3 rounded-full transition-colors duration-700"
               style={{ background: stateColor, boxShadow: `0 0 0 4px ${stateColor}22` }}
             />
-            <span className="font-display text-xl font-semibold tracking-tight">Focus Up</span>
+            <span className="font-display text-xl font-semibold tracking-tight">FocusUp</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-ink-soft sm:gap-5">
