@@ -1,30 +1,119 @@
 @import "tailwindcss";
 
+/* Ambient study room, lit by a desk lamp: warm paper, golden lamp glow,
+   frosted light cards, warm ink text. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
+  --color-ink: #2b2620;
+  --color-ink-soft: #6b6257;
+  --color-ink-faint: #9a8f80;
+  --color-paper: #f6f0e6;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-[#0b0d12] text-slate-100 font-sans antialiased;
+  @apply bg-paper text-ink font-sans antialiased;
 }
 
-/* Soft breathing animation for the status orb. */
+::selection { background: #ffd98a; color: #2b2620; }
+
+/* Frosted light surface used by every card, bar, pill and toast. */
+.glass {
+  background: rgba(255, 252, 246, 0.62);
+  backdrop-filter: blur(22px) saturate(130%);
+  -webkit-backdrop-filter: blur(22px) saturate(130%);
+  border: 1px solid rgba(120, 95, 60, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 45px -22px rgba(90, 60, 20, 0.28);
+}
+
+/* ---------- Desk-lamp background ---------- */
+.lamp-glow {
+  position: absolute;
+  top: -25vmax;
+  left: -15vmax;
+  width: 80vmax;
+  height: 80vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 138, 0.85) 0%, rgba(255, 226, 168, 0.45) 35%, transparent 70%);
+  filter: blur(30px);
+  animation: lamp-flicker 9s ease-in-out infinite;
+}
+.lamp-glow-soft {
+  position: absolute;
+  bottom: -30vmax;
+  right: -20vmax;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 170, 0.45) 0%, transparent 65%);
+  filter: blur(40px);
+  animation: drift-2 60s ease-in-out infinite alternate;
+}
+.ambient-blob {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(110px);
+  opacity: 0.16;
+  transition: background-color 1.5s ease;
+}
+.ambient-blob-1 { top: 10vh; right: -15vmax; animation: drift-1 48s ease-in-out infinite alternate; }
+.ambient-blob-2 { bottom: -20vmax; left: 10vw; opacity: 0.12; animation: drift-3 56s ease-in-out infinite alternate; }
+.ambient-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.ambient-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 20%, transparent 50%, rgba(120, 80, 30, 0.12) 100%);
+}
+@keyframes lamp-flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.03); }
+}
+@keyframes drift-1 { to { transform: translate(-14vmax, 10vmax) scale(1.15); } }
+@keyframes drift-2 { to { transform: translate(-12vmax, -10vmax) scale(1.1); } }
+@keyframes drift-3 { to { transform: translate(16vmax, -8vmax) scale(0.9); } }
+
+/* ---------- Rotating glow border (camera frame) ---------- */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.glow-border {
+  background: conic-gradient(from var(--angle), var(--glow), rgba(255, 255, 255, 0.6) 25%, rgba(255, 255, 255, 0.6) 60%, var(--glow));
+  animation: spin-angle 10s linear infinite;
+}
+@keyframes spin-angle { to { --angle: 360deg; } }
+
+/* ---------- Small animations ---------- */
 @keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
+  0%, 100% { transform: scale(1); opacity: 0.9; }
   50% { transform: scale(1.08); opacity: 1; }
 }
 @keyframes ripple {
-  from { transform: scale(1); opacity: 0.5; }
+  from { transform: scale(1); opacity: 0.45; }
   to { transform: scale(1.9); opacity: 0; }
 }
 @keyframes slide-up {
   from { transform: translate(-50%, 24px); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes fade-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 @keyframes bar {
   0%, 100% { transform: scaleY(0.3); }
@@ -34,9 +123,24 @@ body {
   0% { box-shadow: 0 0 0 0 var(--flash-color); }
   100% { box-shadow: 0 0 0 14px transparent; }
 }
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.22); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
 
 .animate-breathe { animation: breathe 5s ease-in-out infinite; }
 .animate-ripple { animation: ripple 2.4s ease-out infinite; }
-.animate-slide-up { animation: slide-up 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+.animate-fade-up { animation: fade-up 0.6s ease-out both; }
 .animate-bar { animation: bar 0.9s ease-in-out infinite; transform-origin: bottom; }
 .animate-flash { animation: flash 1.2s ease-out 3; }
+.animate-heartbeat { animation: heartbeat var(--beat, 1s) ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

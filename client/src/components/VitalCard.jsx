@@ -26,7 +26,12 @@ function smoothSeries(history, field, reliableField) {
 // `range` = fixed [min, max]; otherwise auto-scales with at least `minSpan`.
 export function Sparkline({ points, color, now, minSpan = 1, range }) {
   const vals = points.filter((p) => p.v != null).map((p) => p.v)
-  if (vals.length < 2) return <div className="mt-2 h-12 rounded-lg border border-dashed border-white/5" />
+  if (vals.length < 2)
+    return (
+      <div className="mt-3 flex h-14 items-center justify-center rounded-xl border border-dashed border-ink/10 text-xs text-ink-faint">
+        no readings yet
+      </div>
+    )
 
   // Keep a minimum vertical range so a ±1 wobble doesn't fill the whole height.
   let [min, max] = range ?? [Math.min(...vals), Math.max(...vals)]
@@ -49,27 +54,40 @@ export function Sparkline({ points, color, now, minSpan = 1, range }) {
       if (seg.length) segments.push(seg)
       seg = []
     }
-    if (p.v != null) seg.push(`${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`)
+    if (p.v != null) seg.push([x(p.t), y(p.v)])
     prevT = p.t
   }
   if (seg.length) segments.push(seg)
 
+  const gradientId = `spark-${color.replace('#', '')}`
+  const line = (s) => s.map(([px, py]) => `${px.toFixed(1)},${py.toFixed(1)}`).join(' ')
+  // Closed shape under the line for the gradient fill.
+  const area = (s) => `${line(s)} ${s.at(-1)[0].toFixed(1)},${h} ${s[0][0].toFixed(1)},${h}`
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2 h-12 w-full">
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-3 h-14 w-full">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
       {segments.map((s, i) =>
         s.length === 1 ? (
-          <circle key={i} cx={s[0].split(',')[0]} cy={s[0].split(',')[1]} r="1.5" fill={color} />
+          <circle key={i} cx={s[0][0]} cy={s[0][1]} r="1.5" fill={color} />
         ) : (
-          <polyline
-            key={i}
-            points={s.join(' ')}
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
+          <g key={i}>
+            <polygon points={area(s)} fill={`url(#${gradientId})`} />
+            <polyline
+              points={line(s)}
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
         )
       )}
     </svg>
@@ -88,26 +106,36 @@ export default function VitalCard({ label, unit, color, history, field, highligh
   const confidence = latest?.[confidenceField]
   const hasRawReading = latest?.[field] != null
 
+  const beatSeconds = status !== 'none' && lastGood.v > 0 ? 60 / lastGood.v : null
+
   return (
-    <div
-      className={`rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition ${highlight ? 'animate-flash' : ''}`}
-      style={{ '--flash-color': color }}
-    >
-      <div className="flex items-center justify-between text-sm text-slate-400">
-        <span>{label}</span>
-        {status === 'stale' && <span className="text-xs text-slate-500">last reading</span>}
+    <div className={`glass rounded-[28px] p-5 ${highlight ? 'animate-flash' : ''}`} style={{ '--flash-color': color }}>
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-sm text-ink-soft">
+          {/* Beats at the measured rate while there's a reading. */}
+          <span
+            className={beatSeconds ? 'animate-heartbeat inline-block' : 'inline-block opacity-40'}
+            style={{ color, '--beat': beatSeconds ? `${beatSeconds}s` : undefined }}
+          >
+            ♥
+          </span>
+          {label}
+        </span>
+        {status === 'stale' && (
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] text-ink-faint">last reading</span>
+        )}
       </div>
 
       {status !== 'none' ? (
-        <div className={`mt-1 flex items-baseline gap-1.5 transition-opacity ${status === 'stale' ? 'opacity-50' : ''}`}>
-          <span className="text-4xl font-semibold tabular-nums">{Math.round(lastGood.v)}</span>
-          <span className="text-slate-500">{unit}</span>
+        <div className={`mt-2 flex items-baseline gap-1.5 transition-opacity ${status === 'stale' ? 'opacity-50' : ''}`}>
+          <span className="font-display text-5xl font-semibold tabular-nums tracking-tight text-ink">{Math.round(lastGood.v)}</span>
+          <span className="text-ink-faint">{unit}</span>
         </div>
       ) : (
         // No trustworthy reading recently: say why instead of showing a number.
-        <div className="mt-1 flex min-h-10 flex-col justify-center">
-          <span className="text-lg text-slate-400">Measuring…</span>
-          <span className="text-xs text-slate-500">
+        <div className="mt-2 flex min-h-12 flex-col justify-center">
+          <span className="font-display text-2xl italic text-ink-soft">Measuring…</span>
+          <span className="mt-0.5 text-xs text-ink-faint">
             {hasRawReading
               ? `Warming up · ${confidence ?? 0}% confidence`
               : waitingHint

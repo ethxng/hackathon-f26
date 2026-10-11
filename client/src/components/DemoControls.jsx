@@ -6,6 +6,14 @@ const SCENARIOS = [
   { key: '3', id: 'overStressed', label: 'Stressed' },
 ]
 
+function Key({ children }) {
+  return (
+    <kbd className="mr-3 inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-ink/15 bg-white px-1.5 font-sans text-xs text-ink-soft shadow-[inset_0_-2px_0_rgba(90,60,20,0.08)]">
+      {children}
+    </kbd>
+  )
+}
+
 // Mock-mode only. Hotkeys always work; press ` to show the panel.
 export default function DemoControls({ demo }) {
   const [open, setOpen] = useState(false)
@@ -24,17 +32,17 @@ export default function DemoControls({ demo }) {
 
   if (!open) return null
   return (
-    <div className="fixed right-4 top-20 z-40 rounded-2xl border border-white/10 bg-[#12151c]/95 p-3 text-sm shadow-xl backdrop-blur">
-      <div className="mb-2 px-1 text-xs uppercase tracking-widest text-slate-500">Demo</div>
-      <div className="flex flex-col gap-1.5">
+    <div className="glass fixed right-4 top-24 z-40 rounded-2xl p-3 text-sm text-ink">
+      <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-ink-faint">Demo</div>
+      <div className="flex flex-col gap-1">
         {SCENARIOS.map((s) => (
-          <button key={s.id} onClick={() => demo.current?.setScenario(s.id)} className="rounded-lg px-3 py-1.5 text-left hover:bg-white/10">
-            <kbd className="mr-2 text-slate-500">{s.key}</kbd>
+          <button key={s.id} onClick={() => demo.current?.setScenario(s.id)} className="flex items-center rounded-xl px-2 py-1.5 text-left transition hover:bg-white/70">
+            <Key>{s.key}</Key>
             {s.label}
           </button>
         ))}
-        <button onClick={() => demo.current?.fireNudge()} className="rounded-lg px-3 py-1.5 text-left hover:bg-white/10">
-          <kbd className="mr-2 text-slate-500">N</kbd>
+        <button onClick={() => demo.current?.fireNudge()} className="flex items-center rounded-xl px-2 py-1.5 text-left transition hover:bg-white/70">
+          <Key>N</Key>
           Fire nudge
         </button>
       </div>
