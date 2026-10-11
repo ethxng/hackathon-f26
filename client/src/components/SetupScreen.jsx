@@ -5,7 +5,7 @@ import ToneKnob from './ToneKnob.jsx'
 import Logo from './Logo.jsx'
 
 const LENGTHS = [25, 45, 60]
-const FEATURES = ['♥ Heart rate', '👀 Attention', '🎙 Voice nudges']
+const FEATURES = ['♥ Heart Rate', '👀 Attention', '🎙 Personalized Voice']
 
 function Step({ n, title, children }) {
   return (
@@ -73,8 +73,7 @@ export default function SetupScreen({ onStart }) {
           </h1>
 
           <p className="mx-auto mt-8 max-w-md text-base leading-relaxed text-ink-soft sm:text-lg lg:mx-0">
-            FocusUp reads your heart rate and attention through your webcam. When you drift or stress out, a voice you
-            choose pulls you back.
+            FocusUp notices when your mind drifts or your stress climbs, and a voice you choose helps you reset. No wearables, just your webcam.
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
@@ -150,7 +149,7 @@ export default function SetupScreen({ onStart }) {
             onClick={() => onStart({ gender, tone, goalMinutes })}
             className="mt-8 w-full rounded-2xl bg-ink py-4 text-lg font-semibold text-paper shadow-[0_14px_34px_-14px_rgba(43,38,32,0.7)] transition hover:-translate-y-0.5 hover:bg-[#3a332b] active:translate-y-0"
           >
-            Start focus session
+            Start Focus Session
           </button>
         </div>
       </div>
