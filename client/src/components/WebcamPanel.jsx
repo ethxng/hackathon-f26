@@ -40,7 +40,8 @@ function PresageFeed({ subscribeFrames }) {
     <>
       <canvas ref={canvasRef} className="h-full w-full -scale-x-100 object-cover" />
       {!hasFrame && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm text-[#e9dfcf]">
+          <span className="h-3 w-3 animate-ping rounded-full bg-[#ffd68a]/70" />
           Waiting for camera from Presage…
         </div>
       )}
@@ -55,7 +56,7 @@ function BrowserFeed() {
     <>
       <video ref={videoRef} autoPlay playsInline muted className="h-full w-full -scale-x-100 object-cover" />
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-[#e9dfcf]">
           Camera preview unavailable: {error}
         </div>
       )}
@@ -63,19 +64,20 @@ function BrowserFeed() {
   )
 }
 
+// Light frosted pill that stays readable over any camera image.
+const PILL = 'rounded-full border border-white/60 bg-[#fffaf2]/80 text-ink shadow-sm backdrop-blur-xl'
+
 function ValidationHint({ validation }) {
   const text = validation.hint || validation.code
   if (validation.blocksVitals) {
     return (
-      <div className="flex items-center gap-2.5 rounded-full border border-amber-300/30 bg-amber-950/70 px-4 py-2 text-sm text-amber-100 backdrop-blur">
-        <span>⚠ {text}</span>
-        <span className="text-xs uppercase tracking-wider text-amber-300/80">Vitals paused</span>
+      <div className={`${PILL} flex items-center gap-2.5 px-4 py-2 text-sm`} style={{ background: 'rgba(255, 241, 220, 0.92)' }}>
+        <span className="text-[#a8650f]">⚠ {text}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c47a14]">Vitals paused</span>
       </div>
     )
   }
-  return (
-    <div className="rounded-full border border-white/15 bg-black/60 px-4 py-2 text-sm text-slate-100 backdrop-blur">{text}</div>
-  )
+  return <div className={`${PILL} px-4 py-2 text-sm`}>{text}</div>
 }
 
 export default function WebcamPanel({ state, faceDetected, validation, subscribeFrames }) {
@@ -84,28 +86,34 @@ export default function WebcamPanel({ state, faceDetected, validation, subscribe
   const faceLost = faceDetected === false
 
   return (
+    // Outer layer: slowly rotating state-colored glow border.
     <div
-      className="relative aspect-video overflow-hidden rounded-3xl border-2 bg-black transition-[border-color,box-shadow] duration-700"
-      style={{ borderColor: color, boxShadow: `0 0 80px -20px ${color}` }}
+      className="glow-border rounded-[34px] p-[3px] transition-shadow duration-700"
+      style={{ '--glow': color, boxShadow: `0 24px 60px -28px ${color}, 0 18px 40px -24px rgba(90,60,20,0.35)` }}
     >
-      {subscribeFrames ? <PresageFeed subscribeFrames={subscribeFrames} /> : <BrowserFeed />}
+      <div className="relative aspect-video overflow-hidden rounded-[31px] bg-[#2b2620]">
+        {subscribeFrames ? <PresageFeed subscribeFrames={subscribeFrames} /> : <BrowserFeed />}
 
-      {faceLost && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <span className="rounded-full bg-amber-400/20 px-4 py-2 text-amber-200">Face not detected</span>
+        {/* Warm lamp tint over the video */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#ffd68a]/15 via-transparent to-black/25" />
+
+        {faceLost && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#2b2620]/45 backdrop-blur-md">
+            <span className={`${PILL} px-5 py-2.5 text-[#a8650f]`}>Face not detected</span>
+          </div>
+        )}
+
+        {/* The face-lost overlay already covers kNoFaceFound. */}
+        {hint && !faceLost && (
+          <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
+            <ValidationHint validation={hint} />
+          </div>
+        )}
+
+        <div className={`${PILL} absolute left-4 top-4 flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium`}>
+          <span className="h-2 w-2 rounded-full transition-colors duration-700" style={{ background: color }} />
+          {STATES[state]?.label}
         </div>
-      )}
-
-      {/* The face-lost overlay already covers kNoFaceFound. */}
-      {hint && !faceLost && (
-        <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
-          <ValidationHint validation={hint} />
-        </div>
-      )}
-
-      <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-sm backdrop-blur">
-        <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-        {STATES[state]?.label}
       </div>
     </div>
   )

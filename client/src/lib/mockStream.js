@@ -51,9 +51,9 @@ export function createMockStream({ onMessage, onOpen }) {
   let current = { ...PROFILES.focused }
   let nudgeTimer = null
   let validationTimer = null
-  // Same rules as server/src/focusScore.js: start 50, +0.5/s focused,
+  // Same rules as server/src/focusScore.js: start 100, +0.5/s focused,
   // −10 on entering a drift then −1/s, otherwise hold. One tick = 1s.
-  let focusScore = 50
+  let focusScore = 100
   let scoredState = null
 
   const emit = (msg) => onMessage({ t: Date.now(), ...msg })
@@ -114,7 +114,7 @@ export function createMockStream({ onMessage, onOpen }) {
         startedAt = Date.now()
         scenario = 'focused'
         state = null
-        focusScore = 50
+        focusScore = 100
         scoredState = null
         clearInterval(timer)
         timer = setInterval(tick, 1000)

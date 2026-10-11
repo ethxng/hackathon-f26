@@ -27,22 +27,22 @@ export const STATES = {
   calibrating: {
     label: 'Calibrating',
     blurb: 'Learning your resting baseline…',
-    color: '#94a3b8',
+    color: '#9a8f80',
   },
   focused: {
     label: 'In the zone',
     blurb: 'Steady vitals, eyes on the work.',
-    color: '#34d399',
+    color: '#3f9a6b',
   },
   unfocused: {
     label: 'Drifting',
     blurb: 'Your attention is wandering.',
-    color: '#fbbf24',
+    color: '#d58a1e',
   },
   overStressed: {
     label: 'Stressed',
     blurb: 'Heart rate and breathing are up.',
-    color: '#fb7185',
+    color: '#d1495b',
   },
 }
 
@@ -55,7 +55,7 @@ export const GENDERS = [
 export const TONES = [
   {
     id: 'chill',
-    color: '#5eead4',
+    color: '#4f9d8a',
     label: 'Chill',
     blurb: 'Soft, easygoing, no pressure.',
     sample: "Hey, no stress. Let's ease back into it whenever you're ready.",
@@ -63,7 +63,7 @@ export const TONES = [
   },
   {
     id: 'sarcastic',
-    color: '#c084fc',
+    color: '#b5598f',
     label: 'Sarcastic',
     blurb: 'Dry wit. Roasts you back to work.',
     sample: 'Wow, that wall must be fascinating. Your work misses you, by the way.',
@@ -71,7 +71,7 @@ export const TONES = [
   },
   {
     id: 'strict',
-    color: '#fbbf24',
+    color: '#3e5c8a',
     label: 'Strict',
     blurb: 'Direct and no-nonsense.',
     sample: 'Eyes back on your work. Now.',

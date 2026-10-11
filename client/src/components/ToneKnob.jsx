@@ -79,19 +79,19 @@ export default function ToneKnob({ value, onChange }) {
       >
         <defs>
           <radialGradient id="knob-face" cx="40%" cy="35%" r="70%">
-            <stop offset="0%" stopColor="#2a2f3d" />
-            <stop offset="100%" stopColor="#12151c" />
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#e9dfcf" />
           </radialGradient>
         </defs>
 
         {/* Track, filled up to the current detent */}
-        <path d={arc(ANGLES[0], ANGLES.at(-1), TRACK_R)} stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" strokeLinecap="round" />
+        <path d={arc(ANGLES[0], ANGLES.at(-1), TRACK_R)} stroke="rgba(90,60,20,0.1)" strokeWidth="6" fill="none" strokeLinecap="round" />
         {index > 0 && (
           <path d={arc(ANGLES[0], angle, TRACK_R)} stroke={tone.color} strokeWidth="6" fill="none" strokeLinecap="round" className="transition-all duration-300" />
         )}
         {ANGLES.map((a, i) => {
           const [x, y] = polar(a, TRACK_R)
-          return <circle key={a} cx={x} cy={y} r={i <= index ? 5 : 4} fill={i <= index ? tone.color : '#3b4150'} className="transition-all duration-300" />
+          return <circle key={a} cx={x} cy={y} r={i <= index ? 5 : 4} fill={i <= index ? tone.color : '#d6cdbf'} className="transition-all duration-300" />
         })}
 
         {/* Dial */}
@@ -101,7 +101,7 @@ export default function ToneKnob({ value, onChange }) {
           cy={C}
           r={KNOB_R}
           fill="url(#knob-face)"
-          stroke="rgba(255,255,255,0.12)"
+          stroke="rgba(90,60,20,0.15)"
           style={{ filter: `drop-shadow(0 0 18px ${tone.color}55)`, transition: 'filter 300ms' }}
         />
         <g
@@ -114,7 +114,9 @@ export default function ToneKnob({ value, onChange }) {
         >
           <line x1={C} y1={C - 18} x2={C} y2={C - KNOB_R + 10} stroke={tone.color} strokeWidth="5" strokeLinecap="round" />
         </g>
-        <circle cx={C} cy={C} r="6" fill="#0b0d12" stroke="rgba(255,255,255,0.15)" />
+        {/* Glass highlight on the upper edge of the dial */}
+        <path d={arc(-70, 70, KNOB_R - 3)} stroke="rgba(255,255,255,0.95)" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <circle cx={C} cy={C} r="6" fill="#f6f0e6" stroke="rgba(90,60,20,0.2)" />
       </svg>
 
       {TONES.map((t, i) => {
@@ -127,7 +129,7 @@ export default function ToneKnob({ value, onChange }) {
             tabIndex={-1}
             onClick={() => select(i)}
             className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2.5 py-1 text-sm font-semibold transition ${
-              selected ? '' : 'text-slate-500 hover:text-slate-300'
+              selected ? '' : 'text-ink-faint hover:text-ink-soft'
             }`}
             style={{ left: x, top: y, color: selected ? t.color : undefined }}
           >

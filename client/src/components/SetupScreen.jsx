@@ -1,8 +1,38 @@
 import { useState } from 'react'
 import { GENDERS, speechSettings, toneOf } from '../lib/contract.js'
+import Ambient from './Ambient.jsx'
 import ToneKnob from './ToneKnob.jsx'
 
 const LENGTHS = [25, 45, 60]
+const FEATURES = ['♥ Heart rate', '👀 Attention', '🎙 Voice nudges']
+
+function Step({ n, title, children }) {
+  return (
+    <section>
+      <div className="mb-3 flex items-baseline gap-3">
+        <span className="font-display text-sm italic text-ink-faint">{n}</span>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-soft">{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// Hand-drawn underline under the key words of the punch line.
+function Swoosh({ color }) {
+  return (
+    <svg viewBox="0 0 300 24" preserveAspectRatio="none" className="absolute -bottom-3 left-0 h-4 w-full" aria-hidden>
+      <path
+        d="M4 16 C 60 6, 120 4, 180 10 S 270 18, 296 8"
+        fill="none"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+        className="transition-[stroke] duration-700"
+      />
+    </svg>
+  )
+}
 
 export default function SetupScreen({ onStart }) {
   const [gender, setGender] = useState(GENDERS[0].id)
@@ -18,74 +48,119 @@ export default function SetupScreen({ onStart }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-16">
-      <div className="w-full max-w-3xl">
-        <div className="mb-12 text-center">
-          <div className="mx-auto mb-6 h-14 w-14 rounded-full bg-emerald-400/90 animate-breathe shadow-[0_0_60px_-10px] shadow-emerald-400" />
-          <h1 className="font-display text-5xl font-semibold tracking-tight">Focus Up</h1>
-          <p className="mt-3 text-slate-400 text-lg">
-            Your camera reads your heart rate, breathing, and attention. When you drift or stress out, a voice brings you back.
+    <div className="relative min-h-screen px-4 py-10 sm:px-8 lg:py-0">
+      <Ambient color={toneInfo.color} />
+
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 lg:grid-cols-[1fr_minmax(0,520px)] lg:gap-16">
+        {/* Left: brand, punch line, what it does */}
+        <div className="text-center animate-fade-up lg:text-left">
+          <div className="mb-10 inline-flex items-center gap-3">
+            <span className="relative h-9 w-9">
+              <span className="absolute -inset-2 rounded-full border border-ink/10" />
+              <span
+                className="absolute inset-0 rounded-full animate-breathe transition-colors duration-700"
+                style={{
+                  background: `radial-gradient(circle at 35% 30%, #ffffff, ${toneInfo.color} 60%)`,
+                  boxShadow: `0 8px 24px -6px ${toneInfo.color}`,
+                }}
+              />
+            </span>
+            <span className="font-display text-3xl font-semibold tracking-tight">Focus Up</span>
+          </div>
+
+          <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl xl:text-7xl">
+            Drift less.
+            <br />
+            <span className="relative inline-block italic transition-colors duration-700" style={{ color: toneInfo.color }}>
+              Finish more.
+              <Swoosh color={`${toneInfo.color}66`} />
+            </span>
+            <span className="ml-2 inline-block align-top text-3xl text-[#e3a43a]" aria-hidden>
+              ✦
+            </span>
+          </h1>
+
+          <p className="mx-auto mt-8 max-w-md text-base leading-relaxed text-ink-soft sm:text-lg lg:mx-0">
+            Focus Up reads your heart rate and attention through your webcam. When you drift or stress out, a voice you
+            choose pulls you back.
           </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
+            {FEATURES.map((f) => (
+              <span key={f} className="rounded-full border border-ink/10 bg-white/60 px-3 py-1 text-xs text-ink-soft">
+                {f}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-[220px_1fr]">
-          <section>
-            <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Voice</h2>
-            <div className="flex rounded-2xl border border-white/10 bg-white/[0.03] p-1">
-              {GENDERS.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => setGender(g.id)}
-                  aria-pressed={g.id === gender}
-                  className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                    g.id === gender ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Tone</h2>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 pb-5 pt-2">
-              <ToneKnob value={tone} onChange={setTone} />
-              <div className="text-center">
-                <div className="text-sm text-slate-400">{toneInfo.blurb}</div>
-                <div className="mt-2 text-sm italic text-slate-300/80">“{toneInfo.sample}”</div>
-                <button
-                  onClick={preview}
-                  className="mt-4 rounded-full border border-white/15 px-4 py-1.5 text-xs text-slate-300 hover:bg-white/10"
-                >
-                  ▶ Preview
-                </button>
+        {/* Right: configuration */}
+        <div className="glass rounded-[32px] p-6 sm:p-8 animate-fade-up" style={{ animationDelay: '120ms' }}>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Step n="01" title="Voice">
+              <div className="flex rounded-2xl border border-ink/10 bg-ink/[0.04] p-1">
+                {GENDERS.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setGender(g.id)}
+                    aria-pressed={g.id === gender}
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                      g.id === gender ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
               </div>
-            </div>
-          </section>
-        </div>
+            </Step>
 
-        <h2 className="mt-10 mb-3 text-sm font-medium uppercase tracking-widest text-slate-500">Session length</h2>
-        <div className="flex gap-3">
-          {LENGTHS.map((m) => (
-            <button
-              key={m}
-              onClick={() => setGoalMinutes(m)}
-              className={`rounded-xl border px-5 py-2.5 text-sm font-medium transition ${
-                m === goalMinutes ? 'border-emerald-400/70 bg-emerald-400/10' : 'border-white/10 hover:border-white/25'
-              }`}
-            >
-              {m} min
-            </button>
-          ))}
-        </div>
+            <Step n="02" title="Session length">
+              <div className="flex gap-2">
+                {LENGTHS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setGoalMinutes(m)}
+                    aria-pressed={m === goalMinutes}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-medium tabular-nums transition ${
+                      m === goalMinutes
+                        ? 'border-ink/20 bg-white text-ink shadow-sm'
+                        : 'border-ink/10 text-ink-soft hover:border-ink/20 hover:text-ink'
+                    }`}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
+            </Step>
+          </div>
 
-        <button
-          onClick={() => onStart({ gender, tone, goalMinutes })}
-          className="mt-12 w-full rounded-2xl bg-emerald-400 py-4 text-lg font-semibold text-slate-950 transition hover:bg-emerald-300"
-        >
-          Start focus session
-        </button>
+          <div className="mt-6">
+            <Step n="03" title="Tone">
+              <div className="rounded-3xl border border-ink/[0.06] bg-white/50 px-4 pb-5 pt-2">
+                <ToneKnob value={tone} onChange={setTone} />
+                <div className="text-center">
+                  <div className="text-sm text-ink-soft">{toneInfo.blurb}</div>
+                  <p className="mx-auto mt-2 max-w-sm font-display text-lg italic leading-snug text-ink">
+                    “{toneInfo.sample}”
+                  </p>
+                  <button
+                    onClick={preview}
+                    className="mt-4 inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white/70 px-4 py-1.5 text-xs font-medium text-ink-soft transition hover:border-ink/30 hover:text-ink"
+                  >
+                    <span style={{ color: toneInfo.color }}>▶</span> Preview voice
+                  </button>
+                </div>
+              </div>
+            </Step>
+          </div>
+
+          <button
+            onClick={() => onStart({ gender, tone, goalMinutes })}
+            className="mt-8 w-full rounded-2xl bg-ink py-4 text-lg font-semibold text-paper shadow-[0_14px_34px_-14px_rgba(43,38,32,0.7)] transition hover:-translate-y-0.5 hover:bg-[#3a332b] active:translate-y-0"
+          >
+            Start focus session
+          </button>
+        </div>
       </div>
     </div>
   )

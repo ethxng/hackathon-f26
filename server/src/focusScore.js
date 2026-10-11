@@ -3,10 +3,10 @@
 // sample timestamps, so the same input always gives the same score.
 
 export const SCORE_CONFIG = {
-  start: 50,
+  start: 100, // start full; drifts cost points, focus earns them back
   max: 100,
   min: 0,
-  focusedGainPerSec: 0.5, // 50 → 100 in ~100s of focus
+  focusedGainPerSec: 0.5, // +10 every 20s of focus
   driftPenalty: 10, // once, on entering `unfocused`
   driftLossPerSec: 1, // while staying `unfocused`
   // `overStressed` and `calibrating` hold the score.

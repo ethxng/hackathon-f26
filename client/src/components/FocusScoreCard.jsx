@@ -1,17 +1,17 @@
 import { Sparkline, WINDOW_MS } from './VitalCard.jsx'
+import RingGauge from './RingGauge.jsx'
 
 const PENALTY_DROP = 5 // a drop this big between samples is a drift penalty
 const PENALTY_SHOW_MS = 3_000 // how long the "−10" chip stays up
 
-const bandColor = (score) => (score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#fb7185')
+const bandColor = (score) => (score >= 70 ? '#3f9a6b' : score >= 40 ? '#d58a1e' : '#d1495b')
 
 function TrendChip({ state, penalty }) {
-  if (penalty) {
-    return <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-300">▼ −{penalty}</span>
-  }
-  if (state === 'focused') return <span className="text-xs font-medium text-emerald-300">▲ climbing</span>
-  if (state === 'unfocused') return <span className="text-xs font-medium text-amber-300">▼ dropping</span>
-  return <span className="text-xs text-slate-500">paused</span>
+  const base = 'rounded-full px-2.5 py-1 text-xs font-semibold'
+  if (penalty) return <span className={`${base} bg-[#d1495b]/12 text-[#b23a4b]`}>▼ −{penalty}</span>
+  if (state === 'focused') return <span className={`${base} bg-[#3f9a6b]/12 text-[#2f7d55]`}>▲ climbing</span>
+  if (state === 'unfocused') return <span className={`${base} bg-[#d58a1e]/12 text-[#a8650f]`}>▼ dropping</span>
+  return <span className={`${base} bg-ink/5 font-medium text-ink-faint`}>paused</span>
 }
 
 // Session focus score (0–100) from the server: up while in the zone, down on drifts.
@@ -31,27 +31,21 @@ export default function FocusScoreCard({ history, state }) {
     }
   }
 
-  const color = score == null ? '#64748b' : bandColor(score)
+  const color = score == null ? '#b8ad9c' : bandColor(score)
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="flex items-center justify-between text-sm text-slate-400">
-        <span>Focus score</span>
-        {score != null && <TrendChip state={state} penalty={penalty} />}
-      </div>
-
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-4xl font-semibold tabular-nums transition-colors duration-500" style={{ color }}>
-          {score ?? '—'}
-        </span>
-        <span className="text-slate-500">/100</span>
-      </div>
-
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full transition-[width,background-color] duration-700"
-          style={{ width: `${score ?? 0}%`, background: color }}
-        />
+    <div className="glass rounded-[28px] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm text-ink-soft">Focus score</div>
+          <div className="mt-3">{score != null && <TrendChip state={state} penalty={penalty} />}</div>
+        </div>
+        <RingGauge value={score} max={100} size={92} stroke={8} color={color}>
+          <span className="font-display text-3xl font-semibold leading-none tabular-nums transition-colors duration-500" style={{ color }}>
+            {score ?? '—'}
+          </span>
+          <span className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-ink-faint">of 100</span>
+        </RingGauge>
       </div>
 
       <Sparkline points={recent} color={color} now={now} range={[0, 100]} />

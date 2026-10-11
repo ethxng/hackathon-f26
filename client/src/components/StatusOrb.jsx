@@ -5,30 +5,45 @@ export default function StatusOrb({ state, reasons, confidence }) {
   const alert = state === 'unfocused' || state === 'overStressed'
 
   return (
-    <div className="flex items-center gap-6 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+    <div className="glass flex items-center gap-6 rounded-[28px] p-6">
       <div className="relative h-20 w-20 shrink-0">
         {alert && <div className="absolute inset-0 rounded-full animate-ripple" style={{ background: info.color }} />}
+        <div className="absolute -inset-2 rounded-full border border-ink/10" />
         <div
           className="absolute inset-0 rounded-full animate-breathe transition-colors duration-700"
-          style={{ background: info.color, boxShadow: `0 0 50px -5px ${info.color}` }}
+          style={{
+            background: `radial-gradient(circle at 35% 30%, #ffffff, ${info.color} 55%, ${info.color})`,
+            boxShadow: `0 14px 36px -10px ${info.color}`,
+          }}
         />
       </div>
-      <div className="min-w-0">
-        <div className="flex items-baseline gap-3">
-          <span className="font-display text-3xl font-semibold" style={{ color: info.color }}>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="font-display text-3xl font-semibold tracking-tight transition-colors duration-700" style={{ color: info.color }}>
             {info.label}
           </span>
           {confidence != null && (
-            <span className="text-sm tabular-nums text-slate-400">{Math.round(confidence * 100)}% confident</span>
+            <span className="flex items-center gap-2 text-xs text-ink-soft">
+              <span className="h-1 w-16 overflow-hidden rounded-full bg-ink/10">
+                <span
+                  className="block h-full rounded-full transition-[width] duration-700"
+                  style={{ width: `${Math.round(confidence * 100)}%`, background: info.color }}
+                />
+              </span>
+              <span className="tabular-nums">{Math.round(confidence * 100)}% sure</span>
+            </span>
           )}
         </div>
-        <div className="mt-1 text-slate-400">{info.blurb}</div>
+        <div className="mt-1 text-ink-soft">{info.blurb}</div>
         {reasons.length > 0 && (
-          <ul className="mt-2 space-y-0.5 text-sm text-slate-300/80">
+          <div className="mt-3 flex flex-wrap gap-2">
             {reasons.map((r) => (
-              <li key={r}>• {r}</li>
+              <span key={r} className="rounded-full border border-ink/10 bg-white/70 px-3 py-1 text-xs text-ink-soft">
+                {r}
+              </span>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>
