@@ -74,3 +74,11 @@ which shows the text and plays the audio (or uses browser speech if `audio` is m
 - At most one request in flight; 20s timeout.
 - Triggers are rate-limited by the detector (60s per state, 20s overall).
 - Until the endpoint exists, the server logs `[nudge] failed: 501 — endpoint not implemented yet` and keeps running.
+# Method:
+1. Repurpose *SmartSpectra* electron-quickstart to get cardio, breath, and face data, along with UI/UX elements
+2. Feed data into deterministic algorithm to determine stress and focus levels
+3. Based on algorithm output, call *Gemini* to create a script based on a user-inputted style that will be read by *ElevenLabs*
+4. *ElevenLabs* reads the script out loud to the user in a pre-determined style
+
+
+
