@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GENDERS, speechSettings, toneOf } from '../lib/contract.js'
 import Ambient from './Ambient.jsx'
 import ToneKnob from './ToneKnob.jsx'
+import Logo from './Logo.jsx'
 
 const LENGTHS = [25, 45, 60]
 const FEATURES = ['♥ Heart rate', '👀 Attention', '🎙 Voice nudges']
@@ -54,18 +55,9 @@ export default function SetupScreen({ onStart }) {
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 lg:grid-cols-[1fr_minmax(0,520px)] lg:gap-16">
         {/* Left: brand, punch line, what it does */}
         <div className="text-center animate-fade-up lg:text-left">
-          <div className="mb-10 inline-flex items-center gap-3">
-            <span className="relative h-9 w-9">
-              <span className="absolute -inset-2 rounded-full border border-ink/10" />
-              <span
-                className="absolute inset-0 rounded-full animate-breathe transition-colors duration-700"
-                style={{
-                  background: `radial-gradient(circle at 35% 30%, #ffffff, ${toneInfo.color} 60%)`,
-                  boxShadow: `0 8px 24px -6px ${toneInfo.color}`,
-                }}
-              />
-            </span>
-            <span className="font-display text-3xl font-semibold tracking-tight">Focus Up</span>
+          <div className="mb-10 inline-flex items-center gap-4">
+            <Logo size={84} />
+            <span className="font-display text-5xl font-semibold tracking-tight sm:text-6xl">FocusUp</span>
           </div>
 
           <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl xl:text-7xl">
@@ -81,7 +73,7 @@ export default function SetupScreen({ onStart }) {
           </h1>
 
           <p className="mx-auto mt-8 max-w-md text-base leading-relaxed text-ink-soft sm:text-lg lg:mx-0">
-            Focus Up reads your heart rate and attention through your webcam. When you drift or stress out, a voice you
+            FocusUp reads your heart rate and attention through your webcam. When you drift or stress out, a voice you
             choose pulls you back.
           </p>
 

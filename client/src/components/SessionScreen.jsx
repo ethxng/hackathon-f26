@@ -3,6 +3,7 @@ import { STATES, voiceLabel } from '../lib/contract.js'
 import { useNudgeAudio } from '../hooks/useNudgeAudio.js'
 import Ambient from './Ambient.jsx'
 import RingGauge from './RingGauge.jsx'
+import Logo from './Logo.jsx'
 import WebcamPanel from './WebcamPanel.jsx'
 import StatusOrb from './StatusOrb.jsx'
 import VitalCard from './VitalCard.jsx'
@@ -39,11 +40,8 @@ export default function SessionScreen({ session, stream, onEnd }) {
       <div className="mx-auto max-w-7xl px-4 pb-44 pt-5 sm:px-6">
         <header className="glass mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[24px] px-5 py-3">
           <div className="flex items-center gap-3">
-            <span
-              className="h-3 w-3 rounded-full transition-colors duration-700"
-              style={{ background: stateColor, boxShadow: `0 0 0 4px ${stateColor}22` }}
-            />
-            <span className="font-display text-xl font-semibold tracking-tight">Focus Up</span>
+            <Logo size={44} />
+            <span className="font-display text-2xl font-semibold tracking-tight">FocusUp</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-ink-soft sm:gap-5">
