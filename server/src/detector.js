@@ -28,6 +28,8 @@ export const DEFAULT_CONFIG = {
   },
 
   overStressed: {
+    // Required: avg pulse (bpm) must be above this. The rules below must also pass.
+    minPulse: 100,
     pulseRatio: 1.08, // avg pulse > baseline * 1.08
     breathingRatio: 1.15,
     pulseAbs: 95, // used when there's no baseline
@@ -42,18 +44,18 @@ export const DEFAULT_CONFIG = {
   quality: {
     // Presage confidences are 0–100 and start at 0 until their window fills
     // (~12s pulse, ~30s breathing). Tune these from real `npm run metrics` output.
-    minPulseConfidence: 50,
-    minBreathingConfidence: 50,
+    minPulseConfidence: 30,
+    minBreathingConfidence: 30,
     minExpressionConfidence: 50,
     // Presage's per-reading `stable` flag. Off until we've confirmed Presage
     // actually sets it: protobuf decodes an unset bool as false, which would
     // reject every reading.
     requireStable: false,
-    // Validation codes during which vitals are unreliable.
+    // Validation codes during which vitals are unreliable. Framing hints (face
+    // too close/far/low, chest not visible) aren't here: Presage already holds
+    // back readings when framing is bad enough to matter.
     blockingValidation: [
       'kExcessiveMotion',
-      'kFaceTooClose',
-      'kFaceTooFar',
       'kTooDark',
       'kTooBright',
       'kCameraTuning',
@@ -206,6 +208,7 @@ export function createDetector(overrides = {}) {
     if (m.pulseCoverage < q.minPulseCoverage) return none;
 
     const r = c.overStressed;
+    if (m.avgPulse == null || m.avgPulse <= r.minPulse) return none;
     const pulseMax = baseline.pulse != null ? baseline.pulse * r.pulseRatio : r.pulseAbs;
     const breathMax = baseline.breathing != null ? baseline.breathing * r.breathingRatio : r.breathingAbs;
     const vs = (key) => (baseline[key] != null ? ` (resting ${baseline[key]})` : '');
@@ -213,7 +216,8 @@ export function createDetector(overrides = {}) {
     const excess = [];
     if (m.avgPulse != null && m.avgPulse > pulseMax) {
       reasons.push(`heart rate ${m.avgPulse} bpm${vs('pulse')}`);
-      excess.push(baseline.pulse != null ? (m.avgPulse / baseline.pulse - r.pulseRatio) / 0.1 : (m.avgPulse - r.pulseAbs) / 10);
+      // Strength = how far above the required minimum (full at +15 bpm).
+      excess.push((m.avgPulse - r.minPulse) / 15);
     }
     if (m.avgBreathing != null && m.avgBreathing > breathMax) {
       reasons.push(`breathing ${m.avgBreathing}/min${vs('breathing')}`);

@@ -87,42 +87,32 @@ test('talking most of the time → unfocused', () => {
   assert.match(r.at(-1).reasons[0], /talking/);
 });
 
-test('pulse well above resting → overStressed', () => {
+test('pulse above 100 and well above resting → overStressed', () => {
   const d = calibrated();
-  const r = run(d, 20, () => ({ pulse: 91 }), 20); // +30%
+  const r = run(d, 20, () => ({ pulse: 105 }), 20);
   assert.equal(r.at(-1).state, 'overStressed');
   assert.match(r.at(-1).reasons[0], /heart rate .* \(resting 70\)/);
 });
 
-test('mild pulse rise alone is not stress, but with faster breathing it is', () => {
-  const mild = calibrated();
-  assert.equal(run(mild, 20, () => ({ pulse: 77 }), 20).at(-1).state, 'focused'); // +10%
-
-  const both = calibrated();
-  assert.equal(run(both, 20, () => ({ pulse: 77, breathing: 17 }), 20).at(-1).state, 'overStressed'); // +10%, +21%
+test('below 100 bpm is never stress, even with fast breathing and a tense face', () => {
+  const d = calibrated();
+  const r = run(d, 20, () => ({ pulse: 98, breathing: 22, expression: 'angry' }), 20).at(-1);
+  assert.equal(r.state, 'focused');
 });
 
-test('pulse +16% alone is enough', () => {
-  const d = calibrated();
-  assert.equal(run(d, 20, () => ({ pulse: 81 }), 20).at(-1).state, 'overStressed');
-});
-
-test('fast breathing alone (+36%) is enough', () => {
-  const d = calibrated();
-  const r = run(d, 20, () => ({ breathing: 19 }), 20).at(-1);
-  assert.equal(r.state, 'overStressed');
-  assert.match(r.reasons[0], /breathing 19\/min \(resting 14\)/);
-});
-
-test('tense expression plus a small pulse rise is stress', () => {
-  const d = calibrated();
-  const r = run(d, 20, () => ({ pulse: 77, expression: 'angry' }), 20).at(-1);
+test('above 100 bpm still needs the other rules to pass', () => {
+  // Resting 95: 102 is above 100 but not 8% above resting, with no other signal.
+  const d = createDetector();
+  run(d, 20, () => ({ pulse: 95 }));
+  assert.equal(run(d, 20, () => ({ pulse: 102 }), 20).at(-1).state, 'focused');
+  // Same pulse plus fast breathing and a tense face → two signals → stressed.
+  const r = run(d, 20, () => ({ pulse: 102, breathing: 20, expression: 'angry' }), 40).at(-1);
   assert.equal(r.state, 'overStressed');
 });
 
 test('stressed wins over distracted', () => {
   const d = calibrated();
-  const r = run(d, 20, () => ({ pulse: 95, ...TURNED }), 20);
+  const r = run(d, 20, () => ({ pulse: 110, ...TURNED }), 20);
   assert.equal(r.at(-1).state, 'overStressed');
 });
 
@@ -153,8 +143,8 @@ test('no pulse ever → leaves calibrating at 45s using absolute thresholds', ()
 
 test('assessQuality: confidence threshold, stable flag, blocking validation', () => {
   const base = { ...CALM };
-  assert.equal(assessQuality({ ...base, pulseConfidence: 50 }).pulseReliable, true);
-  assert.equal(assessQuality({ ...base, pulseConfidence: 49 }).pulseReliable, false);
+  assert.equal(assessQuality({ ...base, pulseConfidence: 30 }).pulseReliable, true);
+  assert.equal(assessQuality({ ...base, pulseConfidence: 29 }).pulseReliable, false);
   assert.equal(assessQuality({ ...base, pulseConfidence: null }).pulseReliable, false);
   assert.equal(assessQuality({ ...base, pulse: null }).pulseReliable, false);
   assert.equal(assessQuality({ ...base, validation: 'kExcessiveMotion' }).pulseReliable, false);
@@ -174,7 +164,7 @@ test('low-confidence warm-up readings do not count toward or skew the baseline',
   const d = createDetector();
   // 10s of warm-up at a wrong value with low confidence, then real readings.
   const r = run(d, 21, (i) => (i < 10 ? { pulse: 50, pulseConfidence: 10 } : {}));
-  assert.match(r[5].reasons[0], /warming up — pulse confidence 10\/50/);
+  assert.match(r[5].reasons[0], /warming up — pulse confidence 10\/30/);
   assert.equal(r[18].state, 'calibrating'); // only 9 reliable readings so far
   assert.equal(r[19].state, 'focused');
   assert.equal(r[19].baseline.pulse, 70); // not dragged toward 50
@@ -201,8 +191,8 @@ test('high pulse with too little reliable coverage is not judged as stress', () 
 test('state confidence scales with how far past the threshold the signal is', () => {
   const mild = calibrated();
   const strong = calibrated();
-  const a = run(mild, 20, () => ({ pulse: 77, breathing: 17 }), 20).at(-1); // just past both thresholds
-  const b = run(strong, 20, () => ({ pulse: 100 }), 20).at(-1); // +43%
+  const a = run(mild, 20, () => ({ pulse: 102 }), 20).at(-1); // just above 100
+  const b = run(strong, 20, () => ({ pulse: 118 }), 20).at(-1);
   assert.equal(a.state, 'overStressed');
   assert.equal(b.state, 'overStressed');
   assert.ok(b.confidence > a.confidence, `${b.confidence} should exceed ${a.confidence}`);
@@ -210,16 +200,14 @@ test('state confidence scales with how far past the threshold the signal is', ()
 });
 
 test('trigger waits for enough confidence, then fires once in the episode', () => {
-  // Pinned: with a lower strongPulseRatio, stress starts while the window still
-  // holds older high-confidence calm readings, which inflates confidence.
-  const d = calibrated({ overStressed: { strongPulseRatio: 1.15 } });
+  const d = calibrated();
   // Stressed by pulse alone, but readings only just reliable (confidence 50) -> state confidence ≤ 0.5.
-  const weak = run(d, 20, () => ({ pulse: 92, pulseConfidence: 50 }), 20);
+  const weak = run(d, 20, () => ({ pulse: 110, pulseConfidence: 50 }), 20);
   assert.equal(weak.at(-1).state, 'overStressed');
   assert.ok(weak.every((r) => !r.trigger), 'should not trigger on weak evidence');
 
   // Same episode, readings firm up -> exactly one trigger.
-  const firm = run(d, 20, () => ({ pulse: 92, pulseConfidence: 95 }), 40);
+  const firm = run(d, 20, () => ({ pulse: 110, pulseConfidence: 95 }), 40);
   assert.equal(firm.filter((r) => r.trigger).length, 1);
   assert.ok(firm.find((r) => r.trigger).trigger.confidence >= 0.6);
 });

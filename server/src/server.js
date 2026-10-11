@@ -17,6 +17,7 @@ import {
 import { assessQuality, createDetector, DEFAULT_CONFIG } from './detector.js';
 import { sendTrigger, TriggerSkipped } from './trigger.js';
 import { nudgeHandler } from './nudge.js';
+import { createFocusScore } from './focusScore.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const PREVIEW_FPS = 15;
@@ -60,6 +61,7 @@ wss.on('connection', (ws) => {
     }
     if (msg.type === 'session:start') {
       session = { gender: msg.gender ?? session.gender, tone: msg.tone ?? session.tone };
+      focusScore.reset();
       console.log(`[ws] session start (gender=${session.gender}, tone=${session.tone}, ${msg.goalMinutes} min)`);
       // Send where the detector already is; it has been running since boot.
       ws.send(JSON.stringify(currentState));
@@ -84,13 +86,16 @@ let currentValidation = null;
 const detector = createDetector();
 // Voice choice from the UI; the nudge endpoint needs it.
 let session = { gender: 'female', tone: 'chill' };
+// 0–100, climbs while focused and drops on drifts; reset each session.
+const focusScore = createFocusScore();
 let currentState = { type: 'state', t: Date.now(), state: detector.state, reasons: [], confidence: null };
 
 const sampler = createSecondSampler((sample) => {
+  const result = detector.push(sample);
+  focusScore.tick(result.state, sample.t);
   // Tag reliability so the UI shows "Measuring…" instead of low-confidence numbers.
   const { pulseReliable, breathingReliable } = assessQuality(sample);
-  broadcast({ ...sample, pulseReliable, breathingReliable });
-  const result = detector.push(sample);
+  broadcast({ ...sample, pulseReliable, breathingReliable, focusScore: Math.round(focusScore.value) });
   const confidence = result.confidence == null ? null : Math.round(result.confidence * 10) / 10;
 
   if (result.changed) {
@@ -118,7 +123,7 @@ const sampler = createSecondSampler((sample) => {
 function nudge(trigger) {
   const startedAt = Date.now();
   console.log(`[nudge] → ${trigger.state} (gender=${session.gender}, tone=${session.tone})`);
-  sendTrigger(trigger, session)
+  sendTrigger(trigger, { ...session, focusScore: Math.round(focusScore.value) })
     .then(({ text, audio }) => {
       const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
       const audioInfo = audio ? `audio ${Math.round((audio.length * 3) / 4 / 1024)}KB` : 'no audio';

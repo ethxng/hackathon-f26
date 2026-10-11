@@ -2,7 +2,8 @@
 //
 // Server -> client:
 //   { type: 'metrics', t, pulse, pulseConfidence, pulseReliable, breathing, breathingConfidence, breathingReliable,
-//                      hrv, faceDetected, faceCentered, talking, blinking, expression }   // confidences 0–100
+//                      hrv, faceDetected, faceCentered, talking, blinking, expression,   // confidences 0–100
+//                      focusScore }   // 0–100: climbs while focused, drops on drifts
 //   { type: 'state',   t, state, reasons: [], confidence }                                // confidence 0–1 or null
 //   { type: 'validation', t, code, hint, ok, blocksVitals }   // Presage capture feedback, e.g.
 //                      // code 'kFaceNotForward', hint 'Face the camera.'; blocksVitals: readings are being discarded
